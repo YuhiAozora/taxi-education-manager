@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/user.dart';
 import 'login_screen.dart';
+import 'admin_checkup_management_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -80,9 +81,19 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index == 2) {
+            // 診断管理画面へ遷移
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AdminCheckupManagementScreen(),
+              ),
+            ).then((_) => _loadData());
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
         },
         destinations: const [
           NavigationDestination(
@@ -92,6 +103,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.people),
             label: '乗務員詳細',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.medical_services),
+            label: '診断管理',
           ),
         ],
       ),

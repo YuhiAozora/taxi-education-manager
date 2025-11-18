@@ -1,16 +1,48 @@
-# flutter_app
+# タクシー教育管理システム
 
-A new Flutter project.
+タクシー乗務員向けの教育管理アプリケーション
 
-## Getting Started
+## 機能
 
-This project is a starting point for a Flutter application.
+- 📚 教育コンテンツ閲覧
+- ✅ 理解度確認クイズ
+- 📊 学習履歴管理
+- 👨‍💼 管理者ダッシュボード
+- 📥 CSV出力機能
 
-A few resources to get you started if this is your first Flutter project:
+## デモアカウント
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+**管理者:**
+- 社員番号: `ADMIN`
+- パスワード: `admin123`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**乗務員:**
+- 社員番号: `D001` / パスワード: `pass123`
+- 社員番号: `D002` / パスワード: `pass123`
+
+## Cloudflare Pages デプロイ設定
+
+### ビルドコマンド
+```
+flutter build web --release
+```
+
+### ビルド出力ディレクトリ
+```
+build/web
+```
+
+### 環境変数
+```
+FLUTTER_VERSION=3.35.4
+```
+
+## 開発環境
+
+- Flutter: 3.35.4
+- Dart: 3.9.2
+- ローカルストレージ: Hive
+
+## ライセンス
+
+Private - タクシー会社内部使用

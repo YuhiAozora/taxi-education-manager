@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../models/user.dart';
 import '../models/education_item.dart';
+import '../models/medical_checkup.dart';
 import 'education_detail_screen.dart';
 import 'learning_history_screen.dart';
 import 'login_screen.dart';
+import 'medical_checkup_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -24,6 +26,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void initState() {
     super.initState();
     _loadData();
+    // ログイン後に診断通知をチェック
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkMedicalCheckupNotifications();
+    });
   }
 
   void _loadData() {
@@ -37,6 +43,179 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _averageScore = DatabaseService.getAverageQuizScore(_currentUser!.id);
       }
     });
+  }
+
+  void _checkMedicalCheckupNotifications() {
+    if (_currentUser == null) return;
+
+    final now = DateTime.now();
+    final checkups = DatabaseService.getMedicalCheckupsByUser(_currentUser!.id);
+    
+    final overdueCheckups = <Map<String, dynamic>>[];
+    final upcomingCheckups = <Map<String, dynamic>>[];
+
+    for (final checkup in checkups) {
+      if (checkup.nextDueDate == null) continue;
+
+      final daysUntilDue = checkup.nextDueDate!.difference(now).inDays;
+      final notificationDate = checkup.nextDueDate!.subtract(
+        Duration(days: checkup.type.notificationDaysBefore),
+      );
+
+      if (daysUntilDue < 0) {
+        // 期限切れ
+        overdueCheckups.add({
+          'checkup': checkup,
+          'daysOverdue': -daysUntilDue,
+        });
+      } else if (now.isAfter(notificationDate)) {
+        // もうすぐ期限
+        upcomingCheckups.add({
+          'checkup': checkup,
+          'daysRemaining': daysUntilDue,
+        });
+      }
+    }
+
+    // 通知があれば表示
+    if (overdueCheckups.isNotEmpty || upcomingCheckups.isNotEmpty) {
+      _showCheckupNotificationDialog(overdueCheckups, upcomingCheckups);
+    }
+  }
+
+  void _showCheckupNotificationDialog(
+    List<Map<String, dynamic>> overdueCheckups,
+    List<Map<String, dynamic>> upcomingCheckups,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              overdueCheckups.isNotEmpty ? Icons.error : Icons.warning,
+              color: overdueCheckups.isNotEmpty ? Colors.red : Colors.orange,
+            ),
+            const SizedBox(width: 8),
+            const Text('診断のお知らせ'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (overdueCheckups.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.error, color: Colors.red, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            '⚠️ 期限切れの診断があります',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...overdueCheckups.map((item) {
+                        final checkup = item['checkup'] as MedicalCheckup;
+                        final daysOverdue = item['daysOverdue'] as int;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            '• ${checkup.type.displayName}\n  期限から${daysOverdue}日経過',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (upcomingCheckups.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            '📅 もうすぐ期限の診断があります',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...upcomingCheckups.map((item) {
+                        final checkup = item['checkup'] as MedicalCheckup;
+                        final daysRemaining = item['daysRemaining'] as int;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            '• ${checkup.type.displayName}\n  残り${daysRemaining}日',
+                            style: const TextStyle(color: Colors.orange),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              const Text(
+                '診断管理画面で詳細を確認してください。',
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('後で確認'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MedicalCheckupScreen(user: _currentUser!),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('診断管理へ'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _logout() async {
@@ -81,6 +260,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       appBar: AppBar(
         title: const Text('教育コンテンツ'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.medical_services),
+            tooltip: '診断管理',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MedicalCheckupScreen(user: _currentUser!),
+                ),
+              );
+              _loadData();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: '学習履歴',

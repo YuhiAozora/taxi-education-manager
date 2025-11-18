@@ -3,12 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/education_item.dart';
 import '../models/learning_record.dart';
+import '../models/medical_checkup.dart';
 
 class DatabaseService {
   static const String _usersBox = 'users';
   static const String _educationItemsBox = 'education_items';
   static const String _learningRecordsBox = 'learning_records';
   static const String _currentUserBox = 'current_user';
+  static const String _medicalCheckupsBox = 'medical_checkups';
 
   static Future<void> initialize() async {
     if (kDebugMode) {
@@ -27,6 +29,7 @@ class DatabaseService {
     await Hive.openBox(_educationItemsBox);
     await Hive.openBox(_learningRecordsBox);
     await Hive.openBox(_currentUserBox);
+    await Hive.openBox(_medicalCheckupsBox);
 
     if (kDebugMode) {
       debugPrint('✅ All boxes opened');
@@ -38,6 +41,7 @@ class DatabaseService {
     await Hive.box(_usersBox).clear();
     await Hive.box(_educationItemsBox).clear();
     await Hive.box(_learningRecordsBox).clear();
+    await Hive.box(_medicalCheckupsBox).clear();
     
     if (kDebugMode) {
       debugPrint('🔄 Cleared all boxes, initializing fresh data...');
@@ -88,9 +92,86 @@ class DatabaseService {
 
     // Initialize education items based on 国交省マニュアル
     await _initializeEducationItems();
+    
+    // Initialize sample medical checkup data for demo
+    await _initializeSampleMedicalCheckups();
 
     if (kDebugMode) {
       debugPrint('✅ Sample data initialized');
+    }
+  }
+  
+  static Future<void> _initializeSampleMedicalCheckups() async {
+    final now = DateTime.now();
+    
+    // Driver1 (D001 - 山田太郎) のサンプル診断データ
+    // 1. 期限切れの適齢診断
+    final checkup1 = MedicalCheckup(
+      id: 'checkup001',
+      userId: 'driver001',
+      type: MedicalCheckupType.tekireishindan,
+      checkupDate: DateTime(now.year - 3, now.month, now.day - 10),
+      institution: '東京適性診断センター',
+      certificateNumber: '診第2021-0123号',
+      notes: '異常なし',
+      nextDueDate: DateTime(now.year, now.month, now.day - 10), // 10日前に期限切れ
+      notificationSent: false,
+      createdAt: DateTime(now.year - 3, now.month, now.day - 10),
+      updatedAt: DateTime(now.year - 3, now.month, now.day - 10),
+    );
+    await saveMedicalCheckup(checkup1);
+    
+    // 2. もうすぐ期限の適性診断
+    final checkup2 = MedicalCheckup(
+      id: 'checkup002',
+      userId: 'driver001',
+      type: MedicalCheckupType.tekiseishindan,
+      checkupDate: DateTime(now.year - 1, now.month, now.day),
+      institution: '関東自動車適性診断センター',
+      certificateNumber: '診第2023-0456号',
+      notes: '良好',
+      nextDueDate: DateTime(now.year, now.month, now.day + 20), // 20日後が期限
+      notificationSent: false,
+      createdAt: DateTime(now.year - 1, now.month, now.day),
+      updatedAt: DateTime(now.year - 1, now.month, now.day),
+    );
+    await saveMedicalCheckup(checkup2);
+    
+    // 3. 正常な初任診断
+    final checkup3 = MedicalCheckup(
+      id: 'checkup003',
+      userId: 'driver001',
+      type: MedicalCheckupType.shoninshindan,
+      checkupDate: DateTime(now.year - 5, 4, 15),
+      institution: '首都圏適性診断協会',
+      certificateNumber: '診第2019-0789号',
+      notes: '初任教育合格',
+      nextDueDate: DateTime(now.year + 5, 4, 15), // まだ先
+      notificationSent: false,
+      createdAt: DateTime(now.year - 5, 4, 15),
+      updatedAt: DateTime(now.year - 5, 4, 15),
+    );
+    await saveMedicalCheckup(checkup3);
+    
+    // Driver2 (D002 - 佐藤花子) のサンプル診断データ
+    // 正常な状態
+    final checkup4 = MedicalCheckup(
+      id: 'checkup004',
+      userId: 'driver002',
+      type: MedicalCheckupType.tekiseishindan,
+      checkupDate: DateTime(now.year, now.month - 2, now.day),
+      institution: '東京適性診断センター',
+      certificateNumber: '診第2024-0111号',
+      notes: '特に問題なし',
+      nextDueDate: DateTime(now.year + 1, now.month - 2, now.day),
+      notificationSent: false,
+      createdAt: DateTime(now.year, now.month - 2, now.day),
+      updatedAt: DateTime(now.year, now.month - 2, now.day),
+    );
+    await saveMedicalCheckup(checkup4);
+    
+    if (kDebugMode) {
+      debugPrint('✅ Sample medical checkup data initialized');
     }
   }
 
@@ -518,10 +599,143 @@ class DatabaseService {
     await Hive.box(_educationItemsBox).clear();
     await Hive.box(_learningRecordsBox).clear();
     await Hive.box(_currentUserBox).clear();
+    await Hive.box(_medicalCheckupsBox).clear();
     
     if (kDebugMode) {
       debugPrint('✅ All data cleared');
     }
+  }
+
+  // Medical Checkup operations
+  static Future<void> saveMedicalCheckup(MedicalCheckup checkup) async {
+    final box = Hive.box(_medicalCheckupsBox);
+    await box.put(checkup.id, checkup.toJson());
+  }
+
+  static MedicalCheckup? getMedicalCheckup(String id) {
+    final box = Hive.box(_medicalCheckupsBox);
+    final data = box.get(id);
+    if (data != null) {
+      return MedicalCheckup.fromJson(Map<String, dynamic>.from(data));
+    }
+    return null;
+  }
+
+  static List<MedicalCheckup> getAllMedicalCheckups() {
+    final box = Hive.box(_medicalCheckupsBox);
+    return box.values
+        .map((data) => MedicalCheckup.fromJson(Map<String, dynamic>.from(data)))
+        .toList();
+  }
+
+  static List<MedicalCheckup> getMedicalCheckupsByUser(String userId) {
+    final checkups = getAllMedicalCheckups()
+        .where((checkup) => checkup.userId == userId)
+        .toList();
+    checkups.sort((a, b) => b.checkupDate.compareTo(a.checkupDate));
+    return checkups;
+  }
+
+  static List<MedicalCheckup> getMedicalCheckupsByType(
+    String userId,
+    MedicalCheckupType type,
+  ) {
+    return getMedicalCheckupsByUser(userId)
+        .where((checkup) => checkup.type == type)
+        .toList();
+  }
+
+  static MedicalCheckup? getLatestCheckupByType(
+    String userId,
+    MedicalCheckupType type,
+  ) {
+    final checkups = getMedicalCheckupsByType(userId, type);
+    if (checkups.isEmpty) return null;
+    return checkups.first; // Already sorted by date desc
+  }
+
+  static Future<void> deleteMedicalCheckup(String id) async {
+    final box = Hive.box(_medicalCheckupsBox);
+    await box.delete(id);
+  }
+
+  /// 次回診断が必要な人のリストを取得 (通知日数を考慮)
+  static List<Map<String, dynamic>> getUpcomingCheckupNotifications() {
+    final now = DateTime.now();
+    final allUsers = getAllDrivers();
+    final notifications = <Map<String, dynamic>>[];
+
+    for (final user in allUsers) {
+      final checkups = getMedicalCheckupsByUser(user.id);
+      
+      // 各診断タイプごとにチェック
+      for (final type in MedicalCheckupType.values) {
+        final latestCheckup = getLatestCheckupByType(user.id, type);
+        
+        if (latestCheckup != null && latestCheckup.nextDueDate != null) {
+          final notificationDate = latestCheckup.nextDueDate!.subtract(
+            Duration(days: type.notificationDaysBefore),
+          );
+          
+          // 通知日を過ぎていて、まだ通知していない場合
+          if (now.isAfter(notificationDate) && 
+              now.isBefore(latestCheckup.nextDueDate!) &&
+              !latestCheckup.notificationSent) {
+            notifications.add({
+              'user': user,
+              'checkup': latestCheckup,
+              'daysRemaining': latestCheckup.nextDueDate!.difference(now).inDays,
+              'isOverdue': false,
+            });
+          }
+          
+          // 期限を過ぎている場合
+          if (now.isAfter(latestCheckup.nextDueDate!)) {
+            notifications.add({
+              'user': user,
+              'checkup': latestCheckup,
+              'daysOverdue': now.difference(latestCheckup.nextDueDate!).inDays,
+              'isOverdue': true,
+            });
+          }
+        }
+      }
+    }
+
+    return notifications;
+  }
+
+  /// 診断管理の統計情報を取得
+  static Map<String, dynamic> getMedicalCheckupStatistics(String userId) {
+    final checkups = getMedicalCheckupsByUser(userId);
+    final now = DateTime.now();
+    
+    int upToDate = 0;
+    int upcoming = 0;
+    int overdue = 0;
+    
+    for (final type in MedicalCheckupType.values) {
+      final latest = getLatestCheckupByType(userId, type);
+      
+      if (latest != null && latest.nextDueDate != null) {
+        final daysUntilDue = latest.nextDueDate!.difference(now).inDays;
+        
+        if (daysUntilDue < 0) {
+          overdue++;
+        } else if (daysUntilDue <= type.notificationDaysBefore) {
+          upcoming++;
+        } else {
+          upToDate++;
+        }
+      }
+    }
+    
+    return {
+      'total': checkups.length,
+      'upToDate': upToDate,
+      'upcoming': upcoming,
+      'overdue': overdue,
+    };
   }
 
   // Education item operations
