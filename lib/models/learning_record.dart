@@ -2,58 +2,49 @@ class LearningRecord {
   String id;
   String userId;
   String educationItemId;
-  String educationTitle;
-  String category;
-  DateTime startTime;
-  DateTime endTime;
+  DateTime completedAt;
   int durationMinutes;
-  bool completed;
-  int? quizScore;
-  int? totalQuestions;
+  String notes;
 
   LearningRecord({
-    required this.id,
+    this.id = '',
     required this.userId,
     required this.educationItemId,
-    required this.educationTitle,
-    required this.category,
-    required this.startTime,
-    required this.endTime,
+    required this.completedAt,
     required this.durationMinutes,
-    this.completed = true,
-    this.quizScore,
-    this.totalQuestions,
+    this.notes = '',
   });
+  
+  // Compatibility getters
+  String get educationTitle => '';
+  String get category => '';
+  DateTime get startTime => completedAt;
+  DateTime get endTime => completedAt.add(Duration(minutes: durationMinutes));
+  bool get completed => true;
+  int? get quizScore => null;
+  int? get totalQuestions => null;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'userId': userId,
       'educationItemId': educationItemId,
-      'educationTitle': educationTitle,
-      'category': category,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
+      'completedAt': completedAt.toIso8601String(),
       'durationMinutes': durationMinutes,
-      'completed': completed,
-      'quizScore': quizScore,
-      'totalQuestions': totalQuestions,
+      'notes': notes,
     };
   }
 
   factory LearningRecord.fromJson(Map<String, dynamic> json) {
     return LearningRecord(
-      id: json['id'],
+      id: json['id'] ?? '',
       userId: json['userId'],
       educationItemId: json['educationItemId'],
-      educationTitle: json['educationTitle'],
-      category: json['category'],
-      startTime: DateTime.parse(json['startTime']),
-      endTime: DateTime.parse(json['endTime']),
-      durationMinutes: json['durationMinutes'],
-      completed: json['completed'] ?? true,
-      quizScore: json['quizScore'],
-      totalQuestions: json['totalQuestions'],
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
+          : (json['endTime'] != null ? DateTime.parse(json['endTime']) : DateTime.now()),
+      durationMinutes: json['durationMinutes'] ?? 0,
+      notes: json['notes'] ?? '',
     );
   }
 

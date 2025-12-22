@@ -18,11 +18,12 @@ class _LearningHistoryScreenState extends State<LearningHistoryScreen> {
     _loadRecords();
   }
 
-  void _loadRecords() {
+  Future<void> _loadRecords() async {
     final currentUser = DatabaseService.getCurrentUser();
     if (currentUser != null) {
+      final records = await DatabaseService.getLearningRecordsByUser(currentUser.id);
       setState(() {
-        _records = DatabaseService.getLearningRecordsByUser(currentUser.id);
+        _records = records;
       });
     }
   }

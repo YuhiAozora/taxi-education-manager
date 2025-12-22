@@ -103,17 +103,12 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
     if (currentUser == null) return;
 
     final record = LearningRecord(
-      id: 'record_${DateTime.now().millisecondsSinceEpoch}',
+      id: '',
       userId: currentUser.id,
       educationItemId: widget.educationItem.id,
-      educationTitle: widget.educationItem.title,
-      category: widget.educationItem.category,
-      startTime: _startTime,
-      endTime: endTime,
+      completedAt: endTime,
       durationMinutes: duration,
-      completed: true,
-      quizScore: _correctAnswers,
-      totalQuestions: widget.educationItem.quizQuestions.length,
+      notes: '学習完了',
     );
 
     await DatabaseService.saveLearningRecord(record);
@@ -290,7 +285,7 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
               
               // Content
               Text(
-                widget.educationItem.content,
+                widget.educationItem.description,
                 style: const TextStyle(
                   fontSize: 16,
                   height: 1.8,

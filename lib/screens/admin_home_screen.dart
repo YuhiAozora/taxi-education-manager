@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/user.dart';
+import '../models/learning_record.dart';
 import 'login_screen.dart';
 import 'admin_checkup_management_screen.dart';
+import 'chatbot_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -23,9 +25,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     _loadData();
   }
 
-  void _loadData() {
+  Future<void> _loadData() async {
+    final drivers = await DatabaseService.getAllDrivers();
     setState(() {
-      _drivers = DatabaseService.getAllDrivers();
+      _drivers = drivers;
     });
   }
 
@@ -51,8 +54,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     if (confirmed == true) {
       await DatabaseService.clearCurrentUser();
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
       );
     }
   }
@@ -63,6 +67,18 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       appBar: AppBar(
         title: const Text('管理者ダッシュボード'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'ヘルプ・サポート',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ChatbotScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '更新',
@@ -114,18 +130,50 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   Widget _buildOverviewTab() {
-    final allRecords = DatabaseService.getAllLearningRecords();
-    final educationItems = DatabaseService.getAllEducationItems();
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _loadOverviewData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (!snapshot.hasData) {
+          return const Center(child: Text('データがありません'));
+        }
+        
+        final data = snapshot.data!;
+        return _buildOverviewContent(data);
+      },
+    );
+  }
+  
+  Future<Map<String, dynamic>> _loadOverviewData() async {
+    final allRecords = await DatabaseService.getAllLearningRecords();
+    final educationItems = await DatabaseService.getAllEducationItems();
     
     int totalLearningMinutes = 0;
     double totalAverageScore = 0.0;
 
     for (final driver in _drivers) {
-      totalLearningMinutes += DatabaseService.getTotalLearningMinutes(driver.id);
-      totalAverageScore += DatabaseService.getAverageQuizScore(driver.id);
+      totalLearningMinutes += await DatabaseService.getTotalLearningMinutes(driver.id);
+      totalAverageScore += await DatabaseService.getAverageQuizScore(driver.id);
     }
 
     final averageScore = _drivers.isEmpty ? 0.0 : totalAverageScore / _drivers.length;
+    
+    return {
+      'allRecords': allRecords,
+      'educationItems': educationItems,
+      'totalLearningMinutes': totalLearningMinutes,
+      'averageScore': averageScore,
+    };
+  }
+  
+  Widget _buildOverviewContent(Map<String, dynamic> data) {
+    final allRecords = data['allRecords'] as List;
+    final educationItems = data['educationItems'] as List;
+    final totalLearningMinutes = data['totalLearningMinutes'] as int;
+    final averageScore = data['averageScore'] as double;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -235,30 +283,29 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             )
           else
             ...allRecords.take(10).map((record) {
-              final user = DatabaseService.getUser(record.userId);
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Colors.blue.shade100,
                     child: Text(
-                      user?.name[0] ?? '?',
+                      record.userId[0],
                       style: TextStyle(color: Colors.blue.shade700),
                     ),
                   ),
                   title: Text(
-                    record.educationTitle,
+                    record.educationItemId,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
-                    '${user?.name ?? '不明'} • ${record.formattedDate} ${record.formattedTime}',
+                    '${record.userId} • ${record.formattedDate} ${record.formattedTime}',
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        record.scoreDisplay,
+                        '${record.durationMinutes}分',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.blue.shade700,
@@ -360,13 +407,23 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  Widget _buildDriverCard(User driver) {
-    final records = DatabaseService.getLearningRecordsByUser(driver.id);
-    final completedCount = DatabaseService.getCompletedItemsCount(driver.id);
-    final totalMinutes = DatabaseService.getTotalLearningMinutes(driver.id);
-    final averageScore = DatabaseService.getAverageQuizScore(driver.id);
-    final totalItems = DatabaseService.getAllEducationItems().length;
+  Future<Map<String, dynamic>> _loadDriverStats(String driverId) async {
+    final completedCount = await DatabaseService.getCompletedItemsCount(driverId);
+    final totalMinutes = await DatabaseService.getTotalLearningMinutes(driverId);
+    final averageScore = await DatabaseService.getAverageQuizScore(driverId);
+    final educationItems = await DatabaseService.getAllEducationItems();
+    final records = await DatabaseService.getLearningRecordsByUser(driverId);
+    
+    return {
+      'completedCount': completedCount,
+      'totalMinutes': totalMinutes,
+      'averageScore': averageScore,
+      'totalItems': educationItems.length,
+      'records': records,
+    };
+  }
 
+  Widget _buildDriverCard(User driver) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
@@ -386,15 +443,39 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         ),
         subtitle: Text('社員番号: ${driver.employeeNumber}'),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          FutureBuilder<Map<String, dynamic>>(
+            future: _loadDriverStats(driver.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              if (!snapshot.hasData) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('データを読み込めませんでした'),
+                );
+              }
+              
+              final stats = snapshot.data!;
+              final completedCount = stats['completedCount'] as int;
+              final totalMinutes = stats['totalMinutes'] as int;
+              final averageScore = stats['averageScore'] as double;
+              final totalItems = stats['totalItems'] as int;
+              final records = stats['records'] as List;
+              
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _buildDriverStat(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildDriverStat(
                         '完了項目',
                         '$completedCount/$totalItems',
                         Icons.check_circle,
@@ -430,44 +511,47 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...records.take(3).map((record) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          size: 16,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                record.educationTitle,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              Text(
-                                '${record.formattedDate} ${record.formattedTime}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade600,
+                  ...records.take(3).map((record) {
+                    final learningRecord = record as LearningRecord;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '学習記録 ${learningRecord.educationItemId.substring(0, 8)}',
+                                  style: const TextStyle(fontSize: 13),
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  '${learningRecord.formattedDate} ${learningRecord.formattedTime}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          record.scoreDisplay,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          Text(
+                            '${learningRecord.durationMinutes}分',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )),
+                        ],
+                      ),
+                    );
+                  }),
                 ] else
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -480,6 +564,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
               ],
             ),
+          );
+            },
           ),
         ],
       ),
@@ -507,10 +593,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  void _exportLearningData() {
-    final allRecords = DatabaseService.getAllLearningRecords();
+  Future<void> _exportLearningData() async {
+    final allRecords = await DatabaseService.getAllLearningRecords();
     
     if (allRecords.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('エクスポートするデータがありません'),
@@ -522,24 +609,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
     // Generate CSV data
     final buffer = StringBuffer();
-    buffer.writeln('社員番号,氏名,教育項目,カテゴリ,学習日,開始時刻,終了時刻,学習時間(分),クイズ得点,合計問題数');
+    buffer.writeln('社員番号,学習日,学習時間(分)');
     
     for (final record in allRecords) {
-      final user = DatabaseService.getUser(record.userId);
-      if (user != null) {
-        buffer.writeln(
-          '${user.employeeNumber},'
-          '${user.name},'
-          '${record.educationTitle},'
-          '${record.category},'
-          '${DateFormat('yyyy/MM/dd').format(record.startTime)},'
-          '${DateFormat('HH:mm').format(record.startTime)},'
-          '${DateFormat('HH:mm').format(record.endTime)},'
-          '${record.durationMinutes},'
-          '${record.quizScore ?? ""},'
-          '${record.totalQuestions ?? ""}'
-        );
-      }
+      buffer.writeln(
+        '${record.userId},'
+        '${DateFormat('yyyy/MM/dd').format(record.completedAt)},'
+        '${record.durationMinutes}'
+      );
     }
 
     if (kDebugMode) {

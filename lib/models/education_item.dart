@@ -1,34 +1,38 @@
 class EducationItem {
   String id;
   String title;
+  String description;
   String category;
-  String content;
-  List<String> keyPoints;
-  List<QuizQuestion> quizQuestions;
-  int estimatedMinutes;
-  int orderIndex;
+  int durationMinutes;
+  bool isRequired;
+  int order;
 
   EducationItem({
     required this.id,
     required this.title,
+    required this.description,
     required this.category,
-    required this.content,
-    required this.keyPoints,
-    required this.quizQuestions,
-    this.estimatedMinutes = 15,
-    this.orderIndex = 0,
+    required this.durationMinutes,
+    required this.isRequired,
+    required this.order,
   });
+  
+  // Compatibility getters
+  String get content => description;
+  List<String> get keyPoints => [];
+  List<QuizQuestion> get quizQuestions => [];
+  int get estimatedMinutes => durationMinutes;
+  int get orderIndex => order;
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'category': category,
-      'content': content,
-      'keyPoints': keyPoints,
-      'quizQuestions': quizQuestions.map((q) => q.toJson()).toList(),
-      'estimatedMinutes': estimatedMinutes,
-      'orderIndex': orderIndex,
+      'description': description,
+      'durationMinutes': durationMinutes,
+      'isRequired': isRequired,
+      'order': order,
     };
   }
 
@@ -37,13 +41,10 @@ class EducationItem {
       id: json['id'],
       title: json['title'],
       category: json['category'],
-      content: json['content'],
-      keyPoints: List<String>.from(json['keyPoints']),
-      quizQuestions: (json['quizQuestions'] as List)
-          .map((q) => QuizQuestion.fromJson(q))
-          .toList(),
-      estimatedMinutes: json['estimatedMinutes'] ?? 15,
-      orderIndex: json['orderIndex'] ?? 0,
+      description: json['description'] ?? json['content'] ?? '',
+      durationMinutes: json['durationMinutes'] ?? json['estimatedMinutes'] ?? 15,
+      isRequired: json['isRequired'] ?? false,
+      order: json['order'] ?? json['orderIndex'] ?? 0,
     );
   }
 }

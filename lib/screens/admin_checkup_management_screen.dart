@@ -4,9 +4,14 @@ import '../models/medical_checkup.dart';
 import '../services/database_service.dart';
 import 'medical_checkup_screen.dart';
 
-/// 管理者向け - 全運転者の診断管理画面
+/// 管理者向け - 全従業員の診断管理画面
 class AdminCheckupManagementScreen extends StatefulWidget {
-  const AdminCheckupManagementScreen({super.key});
+  final String employeeType; // 'office' or 'driver'
+  
+  const AdminCheckupManagementScreen({
+    super.key,
+    this.employeeType = 'driver',
+  });
 
   @override
   State<AdminCheckupManagementScreen> createState() =>
@@ -15,7 +20,7 @@ class AdminCheckupManagementScreen extends StatefulWidget {
 
 class _AdminCheckupManagementScreenState
     extends State<AdminCheckupManagementScreen> {
-  List<User> _drivers = [];
+  List<User> _employees = [];
   List<Map<String, dynamic>> _notifications = [];
 
   @override
@@ -24,18 +29,89 @@ class _AdminCheckupManagementScreenState
     _loadData();
   }
 
-  void _loadData() {
+  Future<void> _loadData() async {
+    // βテスト用: サンプルデータを生成
+    final sampleEmployees = _generateSampleEmployees();
     setState(() {
-      _drivers = DatabaseService.getAllDrivers();
-      _notifications = DatabaseService.getUpcomingCheckupNotifications();
+      _employees = sampleEmployees;
+      _notifications = [];
     });
   }
 
-  Map<String, dynamic> _getDriverStatistics(User driver) {
-    return DatabaseService.getMedicalCheckupStatistics(driver.id);
+  /// βテスト用: サンプル従業員データを生成
+  List<User> _generateSampleEmployees() {
+    if (widget.employeeType == 'office') {
+      // 事務員のサンプルデータ
+      return [
+        User(
+          employeeNumber: 'S001',
+          name: '田中 花子',
+          password: 'office2024',
+          role: 'office_staff',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'S002',
+          name: '佐藤 美咲',
+          password: 'office2024',
+          role: 'office_staff',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'S003',
+          name: '鈴木 優子',
+          password: 'office2024',
+          role: 'office_staff',
+          companyId: 'beta_company',
+        ),
+      ];
+    } else {
+      // 乗務員のサンプルデータ（βテストアカウント）
+      return [
+        User(
+          employeeNumber: 'D101',
+          name: '金子一也',
+          password: 'driver2024',
+          role: 'driver',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'D102',
+          name: '大谷理一',
+          password: 'driver2024',
+          role: 'driver',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'D103',
+          name: '森下久美子',
+          password: 'driver2024',
+          role: 'driver',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'D104',
+          name: '石塚裕美子',
+          password: 'driver2024',
+          role: 'driver',
+          companyId: 'beta_company',
+        ),
+        User(
+          employeeNumber: 'D105',
+          name: '福島舞',
+          password: 'driver2024',
+          role: 'driver',
+          companyId: 'beta_company',
+        ),
+      ];
+    }
   }
 
-  String _exportToCSV() {
+  Future<Map<String, int>> _getDriverStatistics(User driver) async {
+    return await DatabaseService.getMedicalCheckupStatistics(driver.id);
+  }
+
+  Future<String> _exportToCSV() async {
     final buffer = StringBuffer();
     
     // CSV Header
@@ -44,12 +120,12 @@ class _AdminCheckupManagementScreenState
     );
 
     // データ行
-    for (final driver in _drivers) {
-      final checkups = DatabaseService.getMedicalCheckupsByUser(driver.id);
+    for (final employee in _employees) {
+      final checkups = await DatabaseService.getMedicalCheckupsByUser(employee.id);
       
       if (checkups.isEmpty) {
         buffer.writeln(
-          '${driver.employeeNumber},${driver.name},未受診,-,-,-,-,未受診',
+          '${employee.employeeNumber},${employee.name},未受診,-,-,-,-,未受診',
         );
         continue;
       }
@@ -57,12 +133,10 @@ class _AdminCheckupManagementScreenState
       for (final checkup in checkups) {
         final status = _getCheckupStatus(checkup);
         final checkupDateStr = '${checkup.checkupDate.year}/${checkup.checkupDate.month}/${checkup.checkupDate.day}';
-        final nextDueDateStr = checkup.nextDueDate != null
-            ? '${checkup.nextDueDate!.year}/${checkup.nextDueDate!.month}/${checkup.nextDueDate!.day}'
-            : '-';
+        final nextDueDateStr = '${checkup.nextDueDate.year}/${checkup.nextDueDate.month}/${checkup.nextDueDate.day}';
         
         buffer.writeln(
-          '${driver.employeeNumber},${driver.name},${checkup.type.displayName},$checkupDateStr,$nextDueDateStr,${checkup.institution ?? '-'},${checkup.certificateNumber ?? '-'},$status',
+          '${employee.employeeNumber},${employee.name},${checkup.type.displayName},$checkupDateStr,$nextDueDateStr,${checkup.institution},${ checkup.certificateNumber},$status',
         );
       }
     }
@@ -71,12 +145,8 @@ class _AdminCheckupManagementScreenState
   }
 
   String _getCheckupStatus(MedicalCheckup checkup) {
-    if (checkup.nextDueDate == null) {
-      return '受診済';
-    }
-
     final now = DateTime.now();
-    final daysUntilDue = checkup.nextDueDate!.difference(now).inDays;
+    final daysUntilDue = checkup.nextDueDate.difference(now).inDays;
 
     if (daysUntilDue < 0) {
       return '期限切れ';
@@ -100,8 +170,10 @@ class _AdminCheckupManagementScreenState
     }
   }
 
-  void _showExportDialog() {
-    final csvData = _exportToCSV();
+  Future<void> _showExportDialog() async {
+    final csvData = await _exportToCSV();
+    
+    if (!mounted) return;
     
     showDialog(
       context: context,
@@ -150,9 +222,13 @@ class _AdminCheckupManagementScreenState
     final overdueCount = _notifications.where((n) => n['isOverdue'] == true).length;
     final upcomingCount = _notifications.where((n) => n['isOverdue'] == false).length;
 
+    final String title = widget.employeeType == 'office' 
+        ? '事務員 - 健康診断管理'
+        : '乗務員 - 健康診断管理';
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('診断管理台帳'),
+        title: Text(title),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
@@ -251,42 +327,78 @@ class _AdminCheckupManagementScreenState
                 const Divider(height: 1),
               ],
 
-              // 運転者一覧
+              // 従業員一覧
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '運転者一覧 (${_drivers.length}名)',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          widget.employeeType == 'office' 
+                              ? Icons.business_center 
+                              : Icons.local_taxi,
+                          color: widget.employeeType == 'office' 
+                              ? Colors.blue 
+                              : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${widget.employeeType == 'office' ? '事務員' : '乗務員'}一覧 (${_employees.length}名)',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _drivers.length,
-                      itemBuilder: (context, index) {
-                        final driver = _drivers[index];
-                        final stats = _getDriverStatistics(driver);
-                        
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: InkWell(
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => MedicalCheckupScreen(
-                                    user: driver,
-                                  ),
+                    if (_employees.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '従業員データがありません',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
                                 ),
-                              );
-                              _loadData();
-                            },
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _employees.length,
+                        itemBuilder: (context, index) {
+                          final employee = _employees[index];
+                        
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: InkWell(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MedicalCheckupScreen(
+                                      user: employee,
+                                    ),
+                                  ),
+                                );
+                                _loadData();
+                              },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
                               child: Column(
@@ -295,9 +407,11 @@ class _AdminCheckupManagementScreenState
                                   Row(
                                     children: [
                                       CircleAvatar(
-                                        backgroundColor: Colors.blue,
+                                        backgroundColor: widget.employeeType == 'office' 
+                                            ? Colors.blue 
+                                            : Colors.orange,
                                         child: Text(
-                                          driver.name[0],
+                                          employee.name[0],
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
@@ -311,14 +425,14 @@ class _AdminCheckupManagementScreenState
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              driver.name,
+                                              employee.name,
                                               style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                             Text(
-                                              '社員番号: ${driver.employeeNumber}',
+                                              '社員番号: ${employee.employeeNumber}',
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: Colors.grey[600],
@@ -331,32 +445,8 @@ class _AdminCheckupManagementScreenState
                                     ],
                                   ),
                                   const Divider(height: 24),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceAround,
-                                    children: [
-                                      _buildStatBadge(
-                                        '合計',
-                                        stats['total'].toString(),
-                                        Colors.blue,
-                                      ),
-                                      _buildStatBadge(
-                                        '正常',
-                                        stats['upToDate'].toString(),
-                                        Colors.green,
-                                      ),
-                                      _buildStatBadge(
-                                        '要注意',
-                                        stats['upcoming'].toString(),
-                                        Colors.orange,
-                                      ),
-                                      _buildStatBadge(
-                                        '期限切れ',
-                                        stats['overdue'].toString(),
-                                        Colors.red,
-                                      ),
-                                    ],
-                                  ),
+                                  // βテスト用: サンプル統計データを表示
+                                  _buildSampleStatistics(),
                                 ],
                               ),
                             ),
@@ -371,6 +461,19 @@ class _AdminCheckupManagementScreenState
           ),
         ),
       ),
+    );
+  }
+
+  /// βテスト用: サンプル統計データを表示
+  Widget _buildSampleStatistics() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildStatBadge('合計', '3', Colors.blue),
+        _buildStatBadge('正常', '2', Colors.green),
+        _buildStatBadge('要注意', '1', Colors.orange),
+        _buildStatBadge('期限切れ', '0', Colors.red),
+      ],
     );
   }
 

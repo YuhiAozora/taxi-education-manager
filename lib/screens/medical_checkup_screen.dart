@@ -23,9 +23,10 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
     _loadCheckups();
   }
 
-  void _loadCheckups() {
+  Future<void> _loadCheckups() async {
+    final stats = await DatabaseService.getMedicalCheckupStatistics(widget.user.id);
     setState(() {
-      _statistics = DatabaseService.getMedicalCheckupStatistics(widget.user.id);
+      _statistics = stats.map((key, value) => MapEntry(key, value as dynamic));
     });
   }
 
@@ -93,19 +94,27 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
     }
   }
 
-  Color _getStatusColor(MedicalCheckupType type) {
-    final latest = DatabaseService.getLatestCheckupByType(widget.user.id, type);
+  Future<Map<String, dynamic>> _loadCheckupCardData(MedicalCheckupType type) async {
+    final latest = await DatabaseService.getLatestCheckupByType(widget.user.id, type);
+    final statusColor = await _getStatusColor(type);
+    final statusText = await _getStatusText(type);
+    
+    return {
+      'latest': latest,
+      'statusColor': statusColor,
+      'statusText': statusText,
+    };
+  }
+
+  Future<Color> _getStatusColor(MedicalCheckupType type) async {
+    final latest = await DatabaseService.getLatestCheckupByType(widget.user.id, type);
     
     if (latest == null) {
       return Colors.grey;
     }
 
-    if (latest.nextDueDate == null) {
-      return Colors.green;
-    }
-
     final now = DateTime.now();
-    final daysUntilDue = latest.nextDueDate!.difference(now).inDays;
+    final daysUntilDue = latest.nextDueDate.difference(now).inDays;
 
     if (daysUntilDue < 0) {
       return Colors.red; // 期限切れ
@@ -116,19 +125,15 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
     }
   }
 
-  String _getStatusText(MedicalCheckupType type) {
-    final latest = DatabaseService.getLatestCheckupByType(widget.user.id, type);
+  Future<String> _getStatusText(MedicalCheckupType type) async {
+    final latest = await DatabaseService.getLatestCheckupByType(widget.user.id, type);
     
     if (latest == null) {
       return '未受診';
     }
 
-    if (latest.nextDueDate == null) {
-      return '受診済';
-    }
-
     final now = DateTime.now();
-    final daysUntilDue = latest.nextDueDate!.difference(now).inDays;
+    final daysUntilDue = latest.nextDueDate.difference(now).inDays;
 
     if (daysUntilDue < 0) {
       return '期限切れ (${-daysUntilDue}日経過)';
@@ -203,14 +208,30 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
                 itemCount: MedicalCheckupType.values.length,
                 itemBuilder: (context, index) {
                   final type = MedicalCheckupType.values[index];
-                  final latest = DatabaseService.getLatestCheckupByType(
-                    widget.user.id,
-                    type,
-                  );
-                  final statusColor = _getStatusColor(type);
-                  final statusText = _getStatusText(type);
-
-                  return Card(
+                  
+                  return FutureBuilder<Map<String, dynamic>>(
+                    future: _loadCheckupCardData(type),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Card(
+                          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        );
+                      }
+                      
+                      if (!snapshot.hasData) {
+                        return const SizedBox.shrink();
+                      }
+                      
+                      final data = snapshot.data!;
+                      final latest = data['latest'] as MedicalCheckup?;
+                      final statusColor = data['statusColor'] as Color;
+                      final statusText = data['statusText'] as String;
+                      
+                      return Card(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
@@ -322,21 +343,20 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
                                       ],
                                     ),
                                   ),
-                                  if (latest.nextDueDate != null)
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '次回予定日',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey[600],
-                                            ),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '次回予定日',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey[600],
                                           ),
-                                          Text(
-                                            '${latest.nextDueDate!.year}年${latest.nextDueDate!.month}月${latest.nextDueDate!.day}日',
+                                        ),
+                                        Text(
+                                          '${latest.nextDueDate.year}年${latest.nextDueDate.month}月${latest.nextDueDate.day}日',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               color: statusColor,
@@ -347,7 +367,7 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
                                     ),
                                 ],
                               ),
-                              if (latest.institution != null) ...[
+                              if (latest.institution.isNotEmpty) ...[
                                 const SizedBox(height: 8),
                                 Text(
                                   '実施機関: ${latest.institution}',
@@ -390,6 +410,8 @@ class _MedicalCheckupScreenState extends State<MedicalCheckupScreen> {
                         ),
                       ),
                     ),
+                  );
+                    },
                   );
                 },
               ),

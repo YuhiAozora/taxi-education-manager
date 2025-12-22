@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715684901510",
+    "project_id": "taxi-kyouiku-kanri",
+    "storage_bucket": "taxi-kyouiku-kanri.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715684901510:android:d881cba99e04053fe65707",
+        "android_client_info": {
+          "package_name": "com.taxi.education"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6yxHraznfCgdz3WtOwhUhFjYG-nDbFmI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

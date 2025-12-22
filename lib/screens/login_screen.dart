@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
-import 'driver_home_screen.dart';
-import 'admin_home_screen.dart';
+import 'driver_menu_screen.dart';
+import 'company_admin_menu_screen.dart';
+import 'super_admin_menu_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,6 +26,81 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// 📱 スマホ向け: ストレージをクリアしてページリロード
+  Future<void> _clearStorageAndReload() async {
+    // 確認ダイアログを表示
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Text('ログイン情報をリセット'),
+          ],
+        ),
+        content: const Text(
+          '現在のログイン情報をリセットして、\n'
+          '別のアカウントでログインできるようにします。\n\n'
+          '続けますか？'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade700,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('リセットする'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Web版のみ実行
+      if (kIsWeb) {
+        // LocalStorageをクリア
+        await DatabaseService.logout();
+        
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ ログイン情報をリセットしました'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // 入力フォームをクリア
+        setState(() {
+          _employeeNumberController.clear();
+          _passwordController.clear();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Clear storage error: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('エラー: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -34,44 +110,47 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
-
     final employeeNumber = _employeeNumberController.text.trim();
     final password = _passwordController.text;
 
     try {
-      final user = DatabaseService.getUserByEmployeeNumber(employeeNumber);
-
-      debugPrint('🔍 Login attempt:');
+      debugPrint('🔍 Firebase Login attempt:');
       debugPrint('  Employee Number: $employeeNumber');
-      debugPrint('  User found: ${user != null}');
+
+      // Firebase Authentication経由でログイン
+      final user = await DatabaseService.login(employeeNumber, password);
+
       if (user != null) {
-        debugPrint('  User name: ${user.name}');
-        debugPrint('  User password: ${user.password}');
-        debugPrint('  Input password: $password');
-        debugPrint('  Password match: ${user.password == password}');
-        debugPrint('  Password trimmed match: ${user.password.trim() == password.trim()}');
-      }
-
-      if (user != null && user.password.trim() == password.trim()) {
-        // Login successful
-        debugPrint('✅ Login successful!');
-        await DatabaseService.setCurrentUser(user);
-
+        debugPrint('✅ Firebase Login successful!');
+        
         if (!mounted) return;
 
-        if (user.isAdmin) {
+        // 権限に応じて画面を切り替え
+        if (user.isSuperAdmin) {
+          // スーパー管理者（コミュニティ運営者）→ メニュー画面へ
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+            MaterialPageRoute(
+              builder: (_) => SuperAdminMenuScreen(currentUser: user),
+            ),
+          );
+        } else if (user.isCompanyAdmin) {
+          // 会社管理者 → 会社管理者メニュー画面へ
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => CompanyAdminMenuScreen(currentUser: user),
+            ),
           );
         } else {
+          // 運転者 → メニュー画面へ
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+            MaterialPageRoute(
+              builder: (_) => DriverMenuScreen(currentUser: user),
+            ),
           );
         }
       } else {
         // Login failed
-        debugPrint('❌ Login failed');
+        debugPrint('❌ Firebase Login failed');
         if (!mounted) return;
         
         setState(() {
@@ -79,25 +158,34 @@ class _LoginScreenState extends State<LoginScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('社員番号またはパスワードが正しくありません\n(入力: $employeeNumber)'),
+          const SnackBar(
+            content: Text('社員番号またはパスワードが正しくありません'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
       // Error handling
-      debugPrint('Login error: $e');
+      debugPrint('Firebase Login error: $e');
       if (!mounted) return;
       
       setState(() {
         _isLoading = false;
       });
 
+      String errorMessage = 'ログインエラーが発生しました';
+      if (e.toString().contains('インターネット接続')) {
+        errorMessage = 'インターネット接続を確認してください';
+      } else if (e.toString().contains('ユーザーが見つかりません')) {
+        errorMessage = '社員番号が登録されていません';
+      } else if (e.toString().contains('パスワードが正しくありません')) {
+        errorMessage = 'パスワードが正しくありません';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('エラーが発生しました: $e'),
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
         ),
@@ -239,28 +327,44 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
+                          // 💡 自動ログイン説明
                           Container(
+                            width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: Colors.blue.shade50,
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(
-                                  'デモアカウント',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade700,
+                                Icon(Icons.info_outline, 
+                                  color: Colors.blue.shade700, size: 24),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    '前回ログインした場合は\n自動的にログインします',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade900,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                const Text('管理者: ADMIN / admin123'),
-                                const Text('乗務員1: D001 / pass123'),
-                                const Text('乗務員2: D002 / pass123'),
                               ],
                             ),
+                          ),
+                          const SizedBox(height: 16),
+                          // 📱 データリセットボタン（コンパクト版）
+                          OutlinedButton.icon(
+                            onPressed: _clearStorageAndReload,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.orange.shade700,
+                              side: BorderSide(color: Colors.orange.shade300),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            ),
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('他の人でログインする場合はこちら'),
                           ),
                           const SizedBox(height: 16),
                           TextButton.icon(

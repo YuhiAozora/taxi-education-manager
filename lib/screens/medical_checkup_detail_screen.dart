@@ -101,21 +101,10 @@ class _MedicalCheckupDetailScreenState
       userId: widget.userId,
       type: widget.checkupType,
       checkupDate: _checkupDate,
-      institution: _institutionController.text.trim().isEmpty
-          ? null
-          : _institutionController.text.trim(),
-      certificateNumber: _certificateNumberController.text.trim().isEmpty
-          ? null
-          : _certificateNumberController.text.trim(),
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
-      nextDueDate: _nextDueDate,
-      notificationSent: false,
-      createdAt: _isEditing
-          ? widget.existingCheckup!.createdAt
-          : DateTime.now(),
-      updatedAt: DateTime.now(),
+      institution: _institutionController.text.trim(),
+      certificateNumber: _certificateNumberController.text.trim(),
+      notes: _notesController.text.trim(),
+      nextDueDate: _nextDueDate!,
     );
 
     await DatabaseService.saveMedicalCheckup(checkup);

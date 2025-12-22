@@ -4,27 +4,26 @@ class MedicalCheckup {
   String userId;
   MedicalCheckupType type;
   DateTime checkupDate;
-  String? institution; // 診断実施機関
-  String? certificateNumber; // 診断書番号
-  String? notes; // 備考
-  DateTime? nextDueDate; // 次回診断予定日
-  bool notificationSent; // 通知送信済みフラグ
-  DateTime createdAt;
-  DateTime updatedAt;
+  DateTime nextDueDate;
+  String institution;
+  String certificateNumber;
+  String notes;
 
   MedicalCheckup({
-    required this.id,
+    this.id = '',
     required this.userId,
     required this.type,
     required this.checkupDate,
-    this.institution,
-    this.certificateNumber,
-    this.notes,
-    this.nextDueDate,
-    this.notificationSent = false,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.nextDueDate,
+    this.institution = '',
+    this.certificateNumber = '',
+    this.notes = '',
   });
+  
+  // Compatibility getters
+  bool get notificationSent => false;
+  DateTime get createdAt => checkupDate;
+  DateTime get updatedAt => checkupDate;
 
   Map<String, dynamic> toJson() {
     return {
@@ -32,34 +31,31 @@ class MedicalCheckup {
       'userId': userId,
       'type': type.name,
       'checkupDate': checkupDate.toIso8601String(),
+      'nextDueDate': nextDueDate.toIso8601String(),
       'institution': institution,
       'certificateNumber': certificateNumber,
       'notes': notes,
-      'nextDueDate': nextDueDate?.toIso8601String(),
-      'notificationSent': notificationSent,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
   factory MedicalCheckup.fromJson(Map<String, dynamic> json) {
+    final checkupDate = DateTime.parse(json['checkupDate']);
+    final type = MedicalCheckupType.values.firstWhere(
+      (e) => e.name == json['type'],
+      orElse: () => MedicalCheckupType.tekireishindan,
+    );
+    
     return MedicalCheckup(
-      id: json['id'],
+      id: json['id'] ?? '',
       userId: json['userId'],
-      type: MedicalCheckupType.values.firstWhere(
-        (e) => e.name == json['type'],
-        orElse: () => MedicalCheckupType.tekireishindan,
-      ),
-      checkupDate: DateTime.parse(json['checkupDate']),
-      institution: json['institution'],
-      certificateNumber: json['certificateNumber'],
-      notes: json['notes'],
+      type: type,
+      checkupDate: checkupDate,
       nextDueDate: json['nextDueDate'] != null
           ? DateTime.parse(json['nextDueDate'])
-          : null,
-      notificationSent: json['notificationSent'] ?? false,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+          : type.calculateNextDueDate(checkupDate),
+      institution: json['institution'] ?? '',
+      certificateNumber: json['certificateNumber'] ?? '',
+      notes: json['notes'] ?? '',
     );
   }
 
@@ -68,26 +64,20 @@ class MedicalCheckup {
     String? userId,
     MedicalCheckupType? type,
     DateTime? checkupDate,
+    DateTime? nextDueDate,
     String? institution,
     String? certificateNumber,
     String? notes,
-    DateTime? nextDueDate,
-    bool? notificationSent,
-    DateTime? createdAt,
-    DateTime? updatedAt,
   }) {
     return MedicalCheckup(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       type: type ?? this.type,
       checkupDate: checkupDate ?? this.checkupDate,
+      nextDueDate: nextDueDate ?? this.nextDueDate,
       institution: institution ?? this.institution,
       certificateNumber: certificateNumber ?? this.certificateNumber,
       notes: notes ?? this.notes,
-      nextDueDate: nextDueDate ?? this.nextDueDate,
-      notificationSent: notificationSent ?? this.notificationSent,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

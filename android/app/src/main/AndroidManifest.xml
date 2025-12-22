@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.taxi.education">
     <application
         android:label="タクシー教育管理"
         android:name="${applicationName}"

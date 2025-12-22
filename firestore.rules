@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // βテスト用開発モード: すべての読み書きを許可
+    // 本番環境では適切なセキュリティルールに変更してください
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

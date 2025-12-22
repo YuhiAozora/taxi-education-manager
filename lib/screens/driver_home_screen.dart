@@ -7,6 +7,8 @@ import 'education_detail_screen.dart';
 import 'learning_history_screen.dart';
 import 'login_screen.dart';
 import 'medical_checkup_screen.dart';
+import 'chatbot_screen.dart';
+import 'personal_ai_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -21,6 +23,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   int _completedCount = 0;
   int _totalMinutes = 0;
   double _averageScore = 0.0;
+  Set<String> _completedItemIds = {};
 
   @override
   void initState() {
@@ -32,33 +35,45 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     });
   }
 
-  void _loadData() {
-    setState(() {
-      _currentUser = DatabaseService.getCurrentUser();
-      _educationItems = DatabaseService.getAllEducationItems();
+  Future<void> _loadData() async {
+    final user = DatabaseService.getCurrentUser();
+    final items = await DatabaseService.getAllEducationItems();
+    
+    if (user != null) {
+      final completed = await DatabaseService.getCompletedItemsCount(user.id);
+      final minutes = await DatabaseService.getTotalLearningMinutes(user.id);
+      final score = await DatabaseService.getAverageQuizScore(user.id);
+      final records = await DatabaseService.getLearningRecordsByUser(user.id);
+      final completedIds = records.map((r) => r.educationItemId).toSet();
       
-      if (_currentUser != null) {
-        _completedCount = DatabaseService.getCompletedItemsCount(_currentUser!.id);
-        _totalMinutes = DatabaseService.getTotalLearningMinutes(_currentUser!.id);
-        _averageScore = DatabaseService.getAverageQuizScore(_currentUser!.id);
-      }
-    });
+      setState(() {
+        _currentUser = user;
+        _educationItems = items;
+        _completedCount = completed;
+        _totalMinutes = minutes;
+        _averageScore = score;
+        _completedItemIds = completedIds;
+      });
+    } else {
+      setState(() {
+        _currentUser = user;
+        _educationItems = items;
+      });
+    }
   }
 
-  void _checkMedicalCheckupNotifications() {
+  Future<void> _checkMedicalCheckupNotifications() async {
     if (_currentUser == null) return;
 
     final now = DateTime.now();
-    final checkups = DatabaseService.getMedicalCheckupsByUser(_currentUser!.id);
+    final checkups = await DatabaseService.getMedicalCheckupsByUser(_currentUser!.id);
     
     final overdueCheckups = <Map<String, dynamic>>[];
     final upcomingCheckups = <Map<String, dynamic>>[];
 
     for (final checkup in checkups) {
-      if (checkup.nextDueDate == null) continue;
-
-      final daysUntilDue = checkup.nextDueDate!.difference(now).inDays;
-      final notificationDate = checkup.nextDueDate!.subtract(
+      final daysUntilDue = checkup.nextDueDate.difference(now).inDays;
+      final notificationDate = checkup.nextDueDate.subtract(
         Duration(days: checkup.type.notificationDaysBefore),
       );
 
@@ -240,8 +255,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (confirmed == true) {
       await DatabaseService.clearCurrentUser();
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
       );
     }
   }
@@ -254,12 +270,31 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       );
     }
 
-    final categoryMap = DatabaseService.getEducationItemsByCategory();
+    // Group items by category
+    final categoryMap = <String, List<EducationItem>>{};
+    for (var item in _educationItems) {
+      if (!categoryMap.containsKey(item.category)) {
+        categoryMap[item.category] = [];
+      }
+      categoryMap[item.category]!.add(item);
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('教育コンテンツ'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'ヘルプ・サポート',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ChatbotScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.medical_services),
             tooltip: '診断管理',
@@ -374,6 +409,48 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // FAQ と パーソナルAI ボタン
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildServiceButton(
+                          context: context,
+                          icon: Icons.help_outline,
+                          title: 'よくある質問',
+                          subtitle: 'FAQ・使い方',
+                          color: Colors.blue,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ChatbotScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildServiceButton(
+                          context: context,
+                          icon: Icons.psychology,
+                          title: 'パーソナルサポート',
+                          subtitle: 'AI相談',
+                          color: Colors.teal,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PersonalAiScreen(user: _currentUser!),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   
                   // Education items by category
                   ...categoryMap.entries.map((entry) {
@@ -442,8 +519,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _buildEducationCard(EducationItem item) {
-    final records = DatabaseService.getLearningRecordsByUser(_currentUser!.id);
-    final isCompleted = records.any((r) => r.educationItemId == item.id && r.completed);
+    // Check if item is completed based on locally cached _completedCount
+    final isCompleted = _completedItemIds.contains(item.id);
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -525,6 +602,57 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               Icon(
                 Icons.chevron_right,
                 color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // サービスボタン（FAQ/パーソナルAI）
+  Widget _buildServiceButton({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
