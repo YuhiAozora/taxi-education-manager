@@ -74,15 +74,23 @@ class _EducationRecordsScreenState extends State<EducationRecordsScreen> {
       );
 
       // PDF生成
-      final pdfData = await PdfService.generateEducationRecordPdf(record);
+      // TODO: 教育記録簿PDF生成機能は今後実装予定
+      // final pdfData = await PdfService.generateEducationRecordPdf(record);
+      // final fileName = '教育台帳_${record.userName}_${dateFormatter.format(DateTime.now())}.pdf';
+      // await PdfService.previewPdf(pdfData, fileName);
       
       // ローディング非表示
       if (!mounted) return;
       Navigator.of(context).pop();
 
-      // PDFプレビュー
-      final fileName = '教育台帳_${record.userName}_${dateFormatter.format(DateTime.now())}.pdf';
-      await PdfService.previewPdf(pdfData, fileName);
+      // エラーメッセージ表示
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('教育記録簿PDF生成機能は今後実装予定です'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       // ローディング非表示
       if (!mounted) return;

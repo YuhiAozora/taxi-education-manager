@@ -1041,4 +1041,35 @@ class DatabaseService {
         return status;
     }
   }
+
+  /// 会社の全ユーザーを取得
+  static Future<List<User>> getUsersByCompany(String companyId) async {
+    // サンプルユーザーを返す（Firestore未実装のため）
+    return Future.value([
+      User(
+        employeeNumber: 'D101',
+        name: '田中太郎',
+        password: 'driver2024',
+        role: 'driver',
+        companyId: companyId,
+        email: 'tanaka@example.com',
+        phone: '090-1234-5678',
+        address: '東京都渋谷区〇〇1-2-3',
+        birthDate: DateTime(1990, 4, 1),
+        gender: '男性',
+      ),
+      User(
+        employeeNumber: 'D102',
+        name: '佐藤花子',
+        password: 'driver2024',
+        role: 'driver',
+        companyId: companyId,
+        email: 'sato@example.com',
+        phone: '080-9876-5432',
+        address: '東京都新宿区△△2-3-4',
+        birthDate: DateTime(1985, 7, 15),
+        gender: '女性',
+      ),
+    ]);
+  }
 }

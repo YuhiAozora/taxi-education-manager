@@ -12,8 +12,8 @@ class PdfService {
     final pdf = pw.Document();
     
     // 日本語フォントを読み込み
-    final font = await PdfGoogleFonts.notoSansJapaneseRegular();
-    final fontBold = await PdfGoogleFonts.notoSansJapaneseBold();
+    final font = await PdfGoogleFonts.notoSansRegular();
+    final fontBold = await PdfGoogleFonts.notoSansBold();
 
     pdf.addPage(
       pw.MultiPage(
