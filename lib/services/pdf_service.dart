@@ -3,6 +3,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// Web環境でのみインポート
+import 'dart:html' as html show Blob, Url, AnchorElement;
 import '../models/crew_register.dart';
 import '../models/education_register.dart';
 
@@ -539,9 +542,20 @@ class PdfService {
 
   /// PDFプレビュー・ダウンロード
   static Future<void> previewPdf(Uint8List pdfBytes, String filename) async {
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
-      name: filename,
-    );
+    if (kIsWeb) {
+      // Web環境: 直接ダウンロード
+      final blob = html.Blob([pdfBytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', filename)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+    } else {
+      // モバイル/デスクトップ環境: printingパッケージを使用
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdfBytes,
+        name: filename,
+      );
+    }
   }
 }
