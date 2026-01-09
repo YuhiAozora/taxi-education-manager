@@ -3,6 +3,7 @@ import '../models/user.dart';
 import '../services/database_service.dart';
 import 'admin_checkup_management_screen.dart';
 import 'admin/education_records_screen.dart';
+import 'admin/crew_register_screen.dart';
 import 'feedback_screen.dart';
 import 'login_screen.dart';
 
@@ -271,6 +272,23 @@ class CompanyAdminMenuScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => EducationRecordsScreen(currentUser: currentUser),
+                    ),
+                  );
+                },
+              ),
+
+              // 乗務員台帳（PDF出力）
+              _buildMenuCard(
+                context: context,
+                title: '乗務員台帳',
+                subtitle: '乗務員情報のPDF出力',
+                icon: Icons.picture_as_pdf,
+                color: Colors.deepOrange,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CrewRegisterScreen(currentUser: currentUser),
                     ),
                   );
                 },

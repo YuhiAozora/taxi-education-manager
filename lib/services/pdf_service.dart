@@ -3,338 +3,91 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import '../models/education_record.dart';
+import '../models/crew_register.dart';
 
-/// 教育台帳PDF生成サービス（監査対応）
+/// PDF生成サービス（乗務員台帳・教育記録簿）
 class PdfService {
-  /// 教育台帳PDFを生成（詳細版・A4 5-10ページ）
-  static Future<Uint8List> generateEducationRecordPdf(
-    EducationRecord record,
-  ) async {
+  /// 乗務員台帳PDFを生成
+  static Future<Uint8List> generateCrewRegisterPdf(CrewRegister register) async {
     final pdf = pw.Document();
-    final dateFormatter = DateFormat('yyyy年MM月dd日');
-    final timeFormatter = DateFormat('yyyy/MM/dd HH:mm');
+    
+    // 日本語フォントを読み込み
+    final font = await PdfGoogleFonts.notoSansJapaneseRegular();
+    final fontBold = await PdfGoogleFonts.notoSansJapaneseBold();
 
-    // フォント読み込み（日本語対応）
-    final font = await PdfGoogleFonts.notoSansRegular();
-    final boldFont = await PdfGoogleFonts.notoSansBold();
-
-    // ページ1: 表紙・基本情報
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // タイトル
-              pw.Center(
-                child: pw.Text(
-                  '運転手教育台帳',
-                  style: pw.TextStyle(
-                    font: boldFont,
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            // タイトル
+            pw.Center(
+              child: pw.Text(
+                '乗務員台帳',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              pw.SizedBox(height: 10),
-              pw.Divider(thickness: 2),
-              pw.SizedBox(height: 20),
-
-              // 基本情報
-              _buildSectionTitle('【基本情報】', boldFont),
-              pw.SizedBox(height: 10),
-              _buildInfoRow('氏名', record.userName, font),
-              _buildInfoRow('社員番号', record.userId, font),
-              _buildInfoRow('会社ID', record.companyId, font),
-              _buildInfoRow('入社日', dateFormatter.format(record.joinDate), font),
-              _buildInfoRow('経験年数', '${record.experienceYears}年', font),
-              _buildInfoRow('運転免許証', record.licenseType, font),
-              if (record.licenseExpiry != null)
-                _buildInfoRow(
-                  '免許有効期限',
-                  dateFormatter.format(record.licenseExpiry!),
-                  font,
-                ),
-              pw.SizedBox(height: 20),
-
-              // 作成日
-              pw.Divider(),
-              pw.SizedBox(height: 10),
-              pw.Text(
-                '作成日：${dateFormatter.format(DateTime.now())}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-              pw.SizedBox(height: 5),
-              pw.Text(
-                '最終更新：${record.lastUpdated != null ? timeFormatter.format(record.lastUpdated!) : "未更新"}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ2: 教育実績
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【1. 教育実績】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              if (record.educationHistory.isEmpty)
+            ),
+            pw.SizedBox(height: 20),
+            
+            // 基本情報セクション
+            _buildSectionTitle('基本情報', fontBold),
+            _buildInfoTable(
+              font: font,
+              fontBold: fontBold,
+              data: [
+                ['社員番号', register.user.employeeNumber],
+                ['氏名', register.user.name],
+                ['生年月日', register.user.birthDate != null 
+                    ? DateFormat('yyyy年M月d日').format(register.user.birthDate!) 
+                    : '未登録'],
+                ['年齢', register.user.birthDate != null
+                    ? '${DateTime.now().year - register.user.birthDate!.year}歳'
+                    : '-'],
+                ['性別', register.user.gender ?? '未登録'],
+                ['メールアドレス', register.user.email],
+                ['電話番号', register.user.phone ?? '未登録'],
+                ['住所', register.user.address ?? '未登録'],
+              ],
+            ),
+            pw.SizedBox(height: 20),
+            
+            // 健康診断記録セクション
+            _buildSectionTitle('健康診断記録', fontBold),
+            _buildMedicalCheckupTable(register.medicalCheckups, font, fontBold),
+            pw.SizedBox(height: 20),
+            
+            // 教育履歴サマリーセクション
+            _buildSectionTitle('教育履歴', fontBold),
+            _buildEducationSummaryTable(register.educationSummary, font, fontBold),
+            pw.SizedBox(height: 20),
+            
+            // 事故履歴サマリーセクション
+            _buildSectionTitle('事故履歴', fontBold),
+            _buildAccidentSummaryTable(register.accidentSummary, font, fontBold),
+            pw.SizedBox(height: 30),
+            
+            // フッター
+            pw.Divider(),
+            pw.SizedBox(height: 10),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
                 pw.Text(
-                  '教育実績なし',
+                  '発行日: ${DateFormat('yyyy年M月d日').format(register.generatedAt)}',
                   style: pw.TextStyle(font: font, fontSize: 10),
-                )
-              else
-                _buildEducationTable(record.educationHistory, font, boldFont),
-              
-              pw.SizedBox(height: 20),
-              
-              // 統計情報
-              pw.Container(
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
                 ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      '教育統計',
-                      style: pw.TextStyle(font: boldFont, fontSize: 12),
-                    ),
-                    pw.SizedBox(height: 5),
-                    pw.Text(
-                      '総受講回数：${record.educationHistory.length}回',
-                      style: pw.TextStyle(font: font, fontSize: 10),
-                    ),
-                    pw.Text(
-                      '総学習時間：${record.educationHistory.fold<int>(0, (sum, item) => sum + item.durationMinutes)}分',
-                      style: pw.TextStyle(font: font, fontSize: 10),
-                    ),
-                    if (record.educationHistory.isNotEmpty)
-                      pw.Text(
-                        '平均スコア：${(record.educationHistory.fold<int>(0, (sum, item) => sum + item.score) / record.educationHistory.length).toStringAsFixed(1)}点',
-                        style: pw.TextStyle(font: font, fontSize: 10),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ3: 健康診断記録
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【2. 健康診断記録】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              if (record.medicalCheckups.isEmpty)
                 pw.Text(
-                  '健康診断記録なし',
-                  style: pw.TextStyle(font: font, fontSize: 10),
-                )
-              else
-                ..._buildMedicalCheckupList(
-                  record.medicalCheckups,
-                  font,
-                  boldFont,
-                  dateFormatter,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ4: 整備点検記録
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【3. 整備点検記録】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              if (record.vehicleInspections.isEmpty)
-                pw.Text(
-                  '整備点検記録なし',
-                  style: pw.TextStyle(font: font, fontSize: 10),
-                )
-              else
-                _buildVehicleInspectionTable(
-                  record.vehicleInspections,
-                  font,
-                  boldFont,
-                  timeFormatter,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ5: 休暇・勤怠記録
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【4. 休暇・勤怠記録】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              if (record.leaveRecords.isEmpty)
-                pw.Text(
-                  '休暇記録なし',
-                  style: pw.TextStyle(font: font, fontSize: 10),
-                )
-              else
-                _buildLeaveRecordTable(
-                  record.leaveRecords,
-                  font,
-                  boldFont,
-                  dateFormatter,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ6: 事故報告記録
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【5. 事故報告記録】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              if (record.accidentRecords.isEmpty)
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(10),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.green50,
-                    border: pw.Border.all(color: PdfColors.green),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-                  ),
-                  child: pw.Text(
-                    '事故報告なし（優良運転手）',
-                    style: pw.TextStyle(
-                      font: boldFont,
-                      fontSize: 12,
-                      color: PdfColors.green900,
-                    ),
-                  ),
-                )
-              else
-                _buildAccidentRecordTable(
-                  record.accidentRecords,
-                  font,
-                  boldFont,
-                  timeFormatter,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-
-    // ページ7: 特記事項・管理者コメント
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('【6. 特記事項・管理者コメント】', boldFont),
-              pw.SizedBox(height: 10),
-              
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-                ),
-                child: pw.Text(
-                  record.adminNotes ?? '特記事項なし',
+                  'タクシー教育管理システム',
                   style: pw.TextStyle(font: font, fontSize: 10),
                 ),
-              ),
-              
-              pw.Spacer(),
-              
-              // 署名欄
-              pw.Divider(),
-              pw.SizedBox(height: 20),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        '確認者署名：',
-                        style: pw.TextStyle(font: font, fontSize: 10),
-                      ),
-                      pw.SizedBox(height: 20),
-                      pw.Container(
-                        width: 150,
-                        decoration: const pw.BoxDecoration(
-                          border: pw.Border(
-                            bottom: pw.BorderSide(color: PdfColors.black),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        '確認日：',
-                        style: pw.TextStyle(font: font, fontSize: 10),
-                      ),
-                      pw.SizedBox(height: 20),
-                      pw.Container(
-                        width: 150,
-                        decoration: const pw.BoxDecoration(
-                          border: pw.Border(
-                            bottom: pw.BorderSide(color: PdfColors.black),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          );
+              ],
+            ),
+          ];
         },
       ),
     );
@@ -342,287 +95,236 @@ class PdfService {
     return pdf.save();
   }
 
-  // ヘルパー関数群
-
-  static pw.Widget _buildSectionTitle(String title, pw.Font boldFont) {
+  /// セクションタイトルの構築
+  static pw.Widget _buildSectionTitle(String title, pw.Font font) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: pw.BoxDecoration(
         color: PdfColors.blue50,
-        border: pw.Border.all(color: PdfColors.blue),
+        border: pw.Border.all(color: PdfColors.blue300),
       ),
       child: pw.Text(
         title,
         style: pw.TextStyle(
-          font: boldFont,
-          fontSize: 14,
-          fontWeight: pw.FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  static pw.Widget _buildInfoRow(String label, String value, pw.Font font) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-      child: pw.Row(
-        children: [
-          pw.SizedBox(
-            width: 100,
-            child: pw.Text(
-              '$label：',
-              style: pw.TextStyle(font: font, fontSize: 10),
-            ),
-          ),
-          pw.Expanded(
-            child: pw.Text(
-              value,
-              style: pw.TextStyle(font: font, fontSize: 10),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _buildEducationTable(
-    List<EducationHistory> history,
-    pw.Font font,
-    pw.Font boldFont,
-  ) {
-    final dateFormatter = DateFormat('yyyy/MM/dd');
-    
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey400),
-      children: [
-        // ヘッダー
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-          children: [
-            _buildTableCell('実施日', boldFont, isHeader: true),
-            _buildTableCell('教育項目', boldFont, isHeader: true),
-            _buildTableCell('時間', boldFont, isHeader: true),
-            _buildTableCell('理解度', boldFont, isHeader: true),
-          ],
-        ),
-        // データ行
-        ...history.map((item) => pw.TableRow(
-          children: [
-            _buildTableCell(dateFormatter.format(item.completedAt), font),
-            _buildTableCell(item.itemTitle, font),
-            _buildTableCell('${item.durationMinutes}分', font),
-            _buildTableCell('${item.score}点', font),
-          ],
-        )),
-      ],
-    );
-  }
-
-  static pw.Widget _buildTableCell(
-    String text,
-    pw.Font font, {
-    bool isHeader = false,
-  }) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(5),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
           font: font,
-          fontSize: isHeader ? 10 : 9,
-          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+          fontSize: 16,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.blue900,
         ),
       ),
     );
   }
 
-  static List<pw.Widget> _buildMedicalCheckupList(
-    List<MedicalCheckupRecord> checkups,
-    pw.Font font,
-    pw.Font boldFont,
-    DateFormat dateFormatter,
-  ) {
-    return checkups.map((checkup) {
-      final resultColor = checkup.result == '適性あり'
-          ? PdfColors.green50
-          : checkup.result == '要注意'
-              ? PdfColors.orange50
-              : PdfColors.red50;
-
-      return pw.Container(
-        margin: const pw.EdgeInsets.only(bottom: 10),
-        padding: const pw.EdgeInsets.all(10),
-        decoration: pw.BoxDecoration(
-          color: resultColor,
-          border: pw.Border.all(color: PdfColors.grey400),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              '実施日：${dateFormatter.format(checkup.checkupDate)}',
-              style: pw.TextStyle(font: boldFont, fontSize: 10),
-            ),
-            pw.SizedBox(height: 3),
-            pw.Text(
-              '判定：${checkup.result}',
-              style: pw.TextStyle(font: font, fontSize: 10),
-            ),
-            if (checkup.nextScheduled != null) ...[
-              pw.SizedBox(height: 3),
-              pw.Text(
-                '次回予定：${dateFormatter.format(checkup.nextScheduled!)}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-            ],
-            if (checkup.notes != null) ...[
-              pw.SizedBox(height: 3),
-              pw.Text(
-                '備考：${checkup.notes}',
-                style: pw.TextStyle(font: font, fontSize: 9),
-              ),
-            ],
-          ],
-        ),
-      );
-    }).toList();
-  }
-
-  static pw.Widget _buildVehicleInspectionTable(
-    List<VehicleInspectionRecord> inspections,
-    pw.Font font,
-    pw.Font boldFont,
-    DateFormat timeFormatter,
-  ) {
+  /// 基本情報テーブルの構築
+  static pw.Widget _buildInfoTable({
+    required pw.Font font,
+    required pw.Font fontBold,
+    required List<List<String>> data,
+  }) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400),
-      children: [
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: data.map((row) {
+        return pw.TableRow(
           children: [
-            _buildTableCell('点検日時', boldFont, isHeader: true),
-            _buildTableCell('OK件数', boldFont, isHeader: true),
-            _buildTableCell('NG件数', boldFont, isHeader: true),
-            _buildTableCell('備考', boldFont, isHeader: true),
-          ],
-        ),
-        ...inspections.map((item) => pw.TableRow(
-          children: [
-            _buildTableCell(timeFormatter.format(item.inspectionDate), font),
-            _buildTableCell('${item.okCount}件', font),
-            _buildTableCell('${item.ngCount}件', font),
-            _buildTableCell(item.notes ?? '-', font),
-          ],
-        )),
-      ],
-    );
-  }
-
-  static pw.Widget _buildLeaveRecordTable(
-    List<LeaveRecord> leaves,
-    pw.Font font,
-    pw.Font boldFont,
-    DateFormat dateFormatter,
-  ) {
-    return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey400),
-      children: [
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-          children: [
-            _buildTableCell('期間', boldFont, isHeader: true),
-            _buildTableCell('種別', boldFont, isHeader: true),
-            _buildTableCell('状態', boldFont, isHeader: true),
-            _buildTableCell('承認者', boldFont, isHeader: true),
-          ],
-        ),
-        ...leaves.map((item) => pw.TableRow(
-          children: [
-            _buildTableCell(
-              '${dateFormatter.format(item.startDate)}～${dateFormatter.format(item.endDate)}',
-              font,
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              color: PdfColors.grey200,
+              child: pw.Text(
+                row[0],
+                style: pw.TextStyle(font: fontBold, fontSize: 11),
+              ),
             ),
-            _buildTableCell(item.leaveType, font),
-            _buildTableCell(item.status, font),
-            _buildTableCell(item.approver ?? '-', font),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(8),
+              child: pw.Text(
+                row[1],
+                style: pw.TextStyle(font: font, fontSize: 11),
+              ),
+            ),
           ],
-        )),
-      ],
-    );
-  }
-
-  static pw.Widget _buildAccidentRecordTable(
-    List<AccidentRecord> accidents,
-    pw.Font font,
-    pw.Font boldFont,
-    DateFormat timeFormatter,
-  ) {
-    return pw.Column(
-      children: accidents.map((accident) {
-        final severityColor = accident.severity == '軽微'
-            ? PdfColors.yellow50
-            : accident.severity == '通常'
-                ? PdfColors.orange50
-                : PdfColors.red50;
-
-        return pw.Container(
-          margin: const pw.EdgeInsets.only(bottom: 10),
-          padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
-            color: severityColor,
-            border: pw.Border.all(color: PdfColors.grey400),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(5)),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                '発生日時：${timeFormatter.format(accident.accidentDate)}',
-                style: pw.TextStyle(font: boldFont, fontSize: 10),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                '場所：${accident.location}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                '種別：${accident.type}　重大度：${accident.severity}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                '処理状況：${accident.status}',
-                style: pw.TextStyle(font: font, fontSize: 10),
-              ),
-              if (accident.processingNotes != null) ...[
-                pw.SizedBox(height: 3),
-                pw.Text(
-                  '処理メモ：${accident.processingNotes}',
-                  style: pw.TextStyle(font: font, fontSize: 9),
-                ),
-              ],
-            ],
-          ),
         );
       }).toList(),
     );
   }
 
-  /// PDFをプレビュー・印刷
-  static Future<void> previewPdf(Uint8List pdfData, String fileName) async {
-    await Printing.layoutPdf(
-      onLayout: (format) async => pdfData,
-      name: fileName,
+  /// 健康診断テーブルの構築
+  static pw.Widget _buildMedicalCheckupTable(
+    List<dynamic> checkups,
+    pw.Font font,
+    pw.Font fontBold,
+  ) {
+    if (checkups.isEmpty) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(16),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+        ),
+        child: pw.Text(
+          '健康診断記録がありません',
+          style: pw.TextStyle(font: font, fontSize: 11, color: PdfColors.grey600),
+        ),
+      );
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2),
+        1: const pw.FlexColumnWidth(1),
+        2: const pw.FlexColumnWidth(1),
+        3: const pw.FlexColumnWidth(1),
+        4: const pw.FlexColumnWidth(1),
+      },
+      children: [
+        // ヘッダー
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _buildTableCell('診断日', font: fontBold),
+            _buildTableCell('身長(cm)', font: fontBold),
+            _buildTableCell('体重(kg)', font: fontBold),
+            _buildTableCell('血圧', font: fontBold),
+            _buildTableCell('視力', font: fontBold),
+          ],
+        ),
+        // データ行（最新5件まで）
+        ...checkups.take(5).map((checkup) {
+          return pw.TableRow(
+            children: [
+              _buildTableCell(
+                DateFormat('yyyy/M/d').format(checkup.checkupDate),
+                font: font,
+              ),
+              _buildTableCell('${checkup.height?.toStringAsFixed(1) ?? '-'}', font: font),
+              _buildTableCell('${checkup.weight?.toStringAsFixed(1) ?? '-'}', font: font),
+              _buildTableCell(
+                checkup.bloodPressureSystolic != null && checkup.bloodPressureDiastolic != null
+                    ? '${checkup.bloodPressureSystolic}/${checkup.bloodPressureDiastolic}'
+                    : '-',
+                font: font,
+              ),
+              _buildTableCell(
+                checkup.visionLeft != null && checkup.visionRight != null
+                    ? '${checkup.visionLeft?.toStringAsFixed(1)}/${checkup.visionRight?.toStringAsFixed(1)}'
+                    : '-',
+                font: font,
+              ),
+            ],
+          );
+        }).toList(),
+      ],
     );
   }
 
-  /// PDFをダウンロード（Web用）
-  static Future<void> downloadPdf(Uint8List pdfData, String fileName) async {
-    await Printing.sharePdf(
-      bytes: pdfData,
-      filename: fileName,
+  /// 教育履歴サマリーテーブルの構築
+  static pw.Widget _buildEducationSummaryTable(
+    EducationSummary summary,
+    pw.Font font,
+    pw.Font fontBold,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: [
+        _buildInfoRow('総受講項目数', '${summary.totalCompletedItems}件', font, fontBold),
+        _buildInfoRow('総受講時間', '${summary.totalMinutes}分', font, fontBold),
+        _buildInfoRow('平均点', '${summary.averageScore.toStringAsFixed(1)}点', font, fontBold),
+        _buildInfoRow(
+          '最終受講日',
+          summary.lastLearningDate != null
+              ? DateFormat('yyyy年M月d日').format(summary.lastLearningDate!)
+              : '未受講',
+          font,
+          fontBold,
+        ),
+        _buildInfoRow('今年度受講項目', '${summary.itemsThisYear}件', font, fontBold),
+        _buildInfoRow('今年度受講時間', '${summary.minutesThisYear}分', font, fontBold),
+      ],
+    );
+  }
+
+  /// 事故履歴サマリーテーブルの構築
+  static pw.Widget _buildAccidentSummaryTable(
+    AccidentSummary summary,
+    pw.Font font,
+    pw.Font fontBold,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(2),
+      },
+      children: [
+        _buildInfoRow('総事故件数', '${summary.totalAccidents}件', font, fontBold),
+        _buildInfoRow('軽微な事故', '${summary.minorAccidents}件', font, fontBold),
+        _buildInfoRow('中程度の事故', '${summary.moderateAccidents}件', font, fontBold),
+        _buildInfoRow('重大な事故', '${summary.seriousAccidents}件', font, fontBold),
+        _buildInfoRow(
+          '最終事故日',
+          summary.lastAccidentDate != null
+              ? DateFormat('yyyy年M月d日').format(summary.lastAccidentDate!)
+              : 'なし',
+          font,
+          fontBold,
+        ),
+        _buildInfoRow('今年度事故件数', '${summary.accidentsThisYear}件', font, fontBold),
+      ],
+    );
+  }
+
+  /// テーブル行の構築
+  static pw.TableRow _buildInfoRow(
+    String label,
+    String value,
+    pw.Font font,
+    pw.Font fontBold,
+  ) {
+    return pw.TableRow(
+      children: [
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          color: PdfColors.grey200,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(font: fontBold, fontSize: 11),
+          ),
+        ),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(font: font, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// テーブルセルの構築
+  static pw.Widget _buildTableCell(String text, {required pw.Font font}) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(font: font, fontSize: 10),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  /// PDFプレビュー・ダウンロード
+  static Future<void> previewPdf(Uint8List pdfBytes, String filename) async {
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+      name: filename,
     );
   }
 }
