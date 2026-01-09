@@ -449,14 +449,14 @@ class PdfService {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
           children: [
-            _buildTableHeader('No.', font),
-            _buildTableHeader('実施日', font),
-            _buildTableHeader('社員番号', font),
-            _buildTableHeader('氏名', font),
-            _buildTableHeader('教育内容', font),
-            _buildTableHeader('カテゴリー', font),
-            _buildTableHeader('時間', font),
-            _buildTableHeader('指導者', font),
+            _buildTableHeader('No.', font: font),
+            _buildTableHeader('実施日', font: font),
+            _buildTableHeader('社員番号', font: font),
+            _buildTableHeader('氏名', font: font),
+            _buildTableHeader('教育内容', font: font),
+            _buildTableHeader('カテゴリー', font: font),
+            _buildTableHeader('時間', font: font),
+            _buildTableHeader('指導者', font: font),
           ],
         ),
         // データ行
@@ -465,14 +465,14 @@ class PdfService {
           final record = entry.value;
           return pw.TableRow(
             children: [
-              _buildTableCell('$index', font),
-              _buildTableCell(DateFormat('M/d').format(record.date), font),
-              _buildTableCell(record.driverId, font),
-              _buildTableCell(record.driverName, font),
-              _buildTableCell(record.content, font),
-              _buildTableCell(EducationRegister.getCategoryLabel(record.category), font),
-              _buildTableCell(record.formattedDuration, font),
-              _buildTableCell(record.instructor, font),
+              _buildTableCell('$index', font: font),
+              _buildTableCell(DateFormat('M/d').format(record.date), font: font),
+              _buildTableCell(record.driverId, font: font),
+              _buildTableCell(record.driverName, font: font),
+              _buildTableCell(record.content, font: font),
+              _buildTableCell(EducationRegister.getCategoryLabel(record.category), font: font),
+              _buildTableCell(record.formattedDuration, font: font),
+              _buildTableCell(record.instructor, font: font),
             ],
           );
         }).toList(),
@@ -481,7 +481,7 @@ class PdfService {
   }
 
   /// テーブルヘッダーセルの構築
-  static pw.Widget _buildTableHeader(String text, pw.Font font) {
+  static pw.Widget _buildTableHeader(String text, {required pw.Font font}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(4),
       child: pw.Center(
@@ -489,19 +489,6 @@ class PdfService {
           text,
           style: pw.TextStyle(font: font, fontSize: 8, fontWeight: pw.FontWeight.bold),
         ),
-      ),
-    );
-  }
-
-  /// テーブルデータセルの構築
-  static pw.Widget _buildTableCell(String text, pw.Font font) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(4),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(font: font, fontSize: 7),
-        maxLines: 2,
-        overflow: pw.TextOverflow.clip,
       ),
     );
   }
@@ -519,8 +506,8 @@ class PdfService {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
           children: [
-            _buildTableHeader('カテゴリー', font),
-            _buildTableHeader('実施回数', font),
+            _buildTableHeader('カテゴリー', font: font),
+            _buildTableHeader('実施回数', font: font),
           ],
         ),
         // データ行
