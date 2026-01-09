@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import 'admin_checkup_management_screen.dart';
 import 'admin/education_records_screen.dart';
 import 'admin/crew_register_screen.dart';
+import 'admin/education_register_screen.dart';
 import 'feedback_screen.dart';
 import 'login_screen.dart';
 
@@ -289,6 +290,25 @@ class CompanyAdminMenuScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => CrewRegisterScreen(currentUser: currentUser),
+                    ),
+                  );
+                },
+              ),
+
+              // 教育記録簿（PDF出力）
+              _buildMenuCard(
+                context: context,
+                title: '教育記録簿',
+                subtitle: '年度別教育実績のPDF出力',
+                icon: Icons.library_books,
+                color: Colors.green,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EducationRegisterScreen(
+                        companyId: currentUser.companyId,
+                      ),
                     ),
                   );
                 },

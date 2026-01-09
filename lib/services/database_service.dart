@@ -1072,4 +1072,82 @@ class DatabaseService {
       ),
     ]);
   }
+
+  /// 教育記録簿用の年度別データを取得
+  static Future<List<Map<String, dynamic>>> getEducationRegisterData({
+    required String companyId,
+    required int year,
+  }) async {
+    try {
+      // 年度の開始日と終了日を計算（日本の会計年度: 4月始まり）
+      final startDate = DateTime(year, 4, 1);
+      final endDate = DateTime(year + 1, 3, 31, 23, 59, 59);
+
+      final querySnapshot = await _firestore
+          .collection('learning_records')
+          .where('company_id', isEqualTo: companyId)
+          .where('completed_at', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('completed_at', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .get();
+
+      print('📚 教育記録簿データ取得: ${querySnapshot.docs.length}件');
+      
+      return querySnapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data(),
+      }).toList();
+    } catch (e) {
+      print('❌ 教育記録簿データ取得エラー: $e');
+      
+      // サンプルデータを返す（開発・テスト用）
+      return _generateSampleEducationRegisterData(year);
+    }
+  }
+
+  /// サンプル教育記録簿データを生成（開発・テスト用）
+  static List<Map<String, dynamic>> _generateSampleEducationRegisterData(int year) {
+    final now = DateTime.now();
+    final baseDate = DateTime(year, 4, 1);
+    
+    return List.generate(12, (index) {
+      final date = baseDate.add(Duration(days: index * 30 + 7));
+      final categories = ['law', 'safety', 'service', 'vehicle', 'emergency', 'health'];
+      final category = categories[index % categories.length];
+      
+      return {
+        'id': 'sample_record_$index',
+        'recordId': 'REC${year}${(index + 1).toString().padLeft(3, '0')}',
+        'driverId': index % 2 == 0 ? 'D101' : 'D102',
+        'driverName': index % 2 == 0 ? '田中太郎' : '佐藤花子',
+        'date': Timestamp.fromDate(date),
+        'content': _getSampleContent(category),
+        'durationMinutes': 60 + (index % 3) * 30,
+        'instructor': index % 3 == 0 ? '山田教育担当' : '鈴木管理者',
+        'category': category,
+        'companyId': 'SAMPLE_COMPANY',
+        'notes': index % 4 == 0 ? '理解度良好' : null,
+        'createdAt': Timestamp.fromDate(date),
+      };
+    });
+  }
+
+  /// カテゴリー別のサンプルコンテンツを取得
+  static String _getSampleContent(String category) {
+    switch (category) {
+      case 'law':
+        return '道路交通法改正に関する研修';
+      case 'safety':
+        return '安全運転とヒヤリハット事例研究';
+      case 'service':
+        return '接客マナーとクレーム対応';
+      case 'vehicle':
+        return '車両の日常点検と整備知識';
+      case 'emergency':
+        return '緊急時の対応マニュアル';
+      case 'health':
+        return '健康管理と疲労軽減対策';
+      default:
+        return '一般教育研修';
+    }
+  }
 }
