@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show rootBundle;
 // Web環境でのみインポート
 import 'dart:html' as html show Blob, Url, AnchorElement;
 import '../models/crew_register.dart';
@@ -11,13 +12,19 @@ import '../models/education_register.dart';
 
 /// PDF生成サービス（乗務員台帳・教育記録簿）
 class PdfService {
+  /// 日本語フォント読み込み（共通）
+  static Future<pw.Font> _loadFont(String path) async {
+    final fontData = await rootBundle.load(path);
+    return pw.Font.ttf(fontData);
+  }
+
   /// 乗務員台帳PDFを生成
   static Future<Uint8List> generateCrewRegisterPdf(CrewRegister register) async {
     final pdf = pw.Document();
     
-    // 日本語フォントを読み込み
-    final font = await PdfGoogleFonts.notoSansRegular();
-    final fontBold = await PdfGoogleFonts.notoSansBold();
+    // 日本語フォントをアセットから読み込み
+    final font = await _loadFont('assets/fonts/NotoSansJP-Regular.ttf');
+    final fontBold = await _loadFont('assets/fonts/NotoSansJP-Bold.ttf');
 
     pdf.addPage(
       pw.MultiPage(
@@ -328,9 +335,9 @@ class PdfService {
   static Future<Uint8List> generateEducationRegisterPdf(EducationRegisterSummary summary) async {
     final pdf = pw.Document();
     
-    // 日本語フォントを読み込み
-    final font = await PdfGoogleFonts.notoSansRegular();
-    final fontBold = await PdfGoogleFonts.notoSansBold();
+    // 日本語フォントをアセットから読み込み
+    final font = await _loadFont('assets/fonts/NotoSansJP-Regular.ttf');
+    final fontBold = await _loadFont('assets/fonts/NotoSansJP-Bold.ttf');
 
     pdf.addPage(
       pw.MultiPage(
