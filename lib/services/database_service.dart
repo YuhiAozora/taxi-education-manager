@@ -1049,7 +1049,7 @@ class DatabaseService {
       User(
         employeeNumber: 'D101',
         name: '田中太郎',
-        password: 'driver2024',
+        password: '2026',
         role: 'driver',
         companyId: companyId,
         email: 'tanaka@example.com',
@@ -1061,7 +1061,7 @@ class DatabaseService {
       User(
         employeeNumber: 'D102',
         name: '佐藤花子',
-        password: 'driver2024',
+        password: '2026',
         role: 'driver',
         companyId: companyId,
         email: 'sato@example.com',

@@ -102,31 +102,31 @@ class WebAuthService {
         // 🧪 βテスト - 運転手（テスト会社）
         'D101': {
           'name': '金子一也',
-          'password': 'driver2024',
+          'password': '2026',
           'role': 'driver',
           'companyId': 'beta_company',
         },
         'D102': {
           'name': '大谷理一',
-          'password': 'driver2024',
+          'password': '2026',
           'role': 'driver',
           'companyId': 'beta_company',
         },
         'D103': {
           'name': '森下久美子',
-          'password': 'driver2024',
+          'password': '2026',
           'role': 'driver',
           'companyId': 'beta_company',
         },
         'D104': {
           'name': '石塚裕美子',
-          'password': 'driver2024',
+          'password': '2026',
           'role': 'driver',
           'companyId': 'beta_company',
         },
         'D105': {
           'name': '福島舞',
-          'password': 'driver2024',
+          'password': '2026',
           'role': 'driver',
           'companyId': 'beta_company',
         },
