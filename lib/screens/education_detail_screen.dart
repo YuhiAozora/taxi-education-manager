@@ -374,6 +374,25 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
   }
 
   Widget _buildQuizView() {
+    // データチェック
+    if (widget.educationItem.quizQuestions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('クイズ')),
+        body: const Center(
+          child: Text('クイズが登録されていません'),
+        ),
+      );
+    }
+
+    if (_currentQuestionIndex >= widget.educationItem.quizQuestions.length) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('クイズ')),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final question = widget.educationItem.quizQuestions[_currentQuestionIndex];
     final progress = (_currentQuestionIndex + 1) / widget.educationItem.quizQuestions.length;
 
@@ -408,150 +427,161 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
           },
         ),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: Colors.grey.shade200,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Text(
-                          question.question,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+      body: Column(
+        children: [
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: Colors.grey.shade200,
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text(
+                        question.question,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    ...List.generate(question.options.length, (index) {
-                      final isSelected = _selectedAnswerIndex == index;
-                      final isCorrect = index == question.correctAnswerIndex;
-                      
-                      Color? backgroundColor;
-                      Color? borderColor;
-                      
-                      if (_showExplanation) {
-                        if (isCorrect) {
-                          backgroundColor = Colors.green.shade50;
-                          borderColor = Colors.green;
-                        } else if (isSelected) {
-                          backgroundColor = Colors.red.shade50;
-                          borderColor = Colors.red;
-                        }
-                      } else if (isSelected) {
-                        backgroundColor = Colors.blue.shade50;
-                        borderColor = Colors.blue;
-                      }
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          onTap: () => _selectAnswer(index),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: backgroundColor,
-                              border: Border.all(
-                                color: borderColor ?? Colors.grey.shade300,
-                                width: 2,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isSelected
-                                        ? (borderColor ?? Colors.blue)
-                                        : Colors.white,
-                                    border: Border.all(
-                                      color: borderColor ?? Colors.grey.shade400,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      String.fromCharCode(65 + index),
-                                      style: TextStyle(
-                                        color: isSelected ? Colors.white : Colors.grey.shade600,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    question.options[index],
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                                if (_showExplanation && isCorrect)
-                                  const Icon(Icons.check_circle, color: Colors.green),
-                                if (_showExplanation && isSelected && !isCorrect)
-                                  const Icon(Icons.cancel, color: Colors.red),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                  ),
+                  const SizedBox(height: 24),
+                  ...List.generate(question.options.length, (index) {
+                    final isSelected = _selectedAnswerIndex == index;
+                    final isCorrect = index == question.correctAnswerIndex;
                     
-                    if (_showExplanation) ...[
-                      const SizedBox(height: 24),
-                      Card(
-                        color: Colors.blue.shade50,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    Color? backgroundColor;
+                    Color? borderColor;
+                    
+                    if (_showExplanation) {
+                      if (isCorrect) {
+                        backgroundColor = Colors.green.shade50;
+                        borderColor = Colors.green;
+                      } else if (isSelected) {
+                        backgroundColor = Colors.red.shade50;
+                        borderColor = Colors.red;
+                      }
+                    } else if (isSelected) {
+                      backgroundColor = Colors.blue.shade50;
+                      borderColor = Colors.blue;
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () => _selectAnswer(index),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            border: Border.all(
+                              color: borderColor ?? Colors.grey.shade300,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
                             children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.info, color: Colors.blue.shade700),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '解説',
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected
+                                      ? (borderColor ?? Colors.blue)
+                                      : Colors.white,
+                                  border: Border.all(
+                                    color: borderColor ?? Colors.grey.shade400,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    String.fromCharCode(65 + index),
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      color: isSelected ? Colors.white : Colors.grey.shade600,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade700,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                question.explanation,
-                                style: const TextStyle(fontSize: 14),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  question.options[index],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
+                              if (_showExplanation && isCorrect)
+                                const Icon(Icons.check_circle, color: Colors.green),
+                              if (_showExplanation && isSelected && !isCorrect)
+                                const Icon(Icons.cancel, color: Colors.red),
                             ],
                           ),
                         ),
                       ),
-                    ],
+                    );
+                  }),
+                  
+                  if (_showExplanation) ...[
+                    const SizedBox(height: 24),
+                    Card(
+                      color: Colors.blue.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.info, color: Colors.blue.shade700),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '解説',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              question.explanation,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
-                ),
+                  const SizedBox(height: 100), // ボタン用のスペース
+                ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(16),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  offset: const Offset(0, -2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: SafeArea(
               child: SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -562,6 +592,7 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue.shade700,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -577,8 +608,8 @@ class _EducationDetailScreenState extends State<EducationDetailScreen> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
