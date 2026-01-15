@@ -47,40 +47,18 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
         });
       }
     } catch (e) {
-      // エラー時はサンプルデータを表示
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('データの読み込みに失敗しました: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
         setState(() {
-          _myRequests = _getSampleRequests();
+          _myRequests = [];
         });
       }
     }
-  }
-
-  List<LeaveRequest> _getSampleRequests() {
-    return [
-      LeaveRequest(
-        id: 'sample_1',
-        userId: widget.currentUser.employeeNumber,
-        companyId: widget.currentUser.companyId ?? '',
-        type: LeaveType.paidLeave,
-        startDate: DateTime.now().add(const Duration(days: 20)),
-        endDate: DateTime.now().add(const Duration(days: 22)),
-        reason: '家族旅行のため',
-        status: LeaveStatus.approved,
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      ),
-      LeaveRequest(
-        id: 'sample_2',
-        userId: widget.currentUser.employeeNumber,
-        companyId: widget.currentUser.companyId ?? '',
-        type: LeaveType.specialLeave,
-        startDate: DateTime.now().add(const Duration(days: 30)),
-        endDate: DateTime.now().add(const Duration(days: 30)),
-        reason: '結婚式参列のため',
-        status: LeaveStatus.pending,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-    ];
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
