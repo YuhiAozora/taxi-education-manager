@@ -54,6 +54,27 @@ class _VehicleInspectionScreenState extends State<VehicleInspectionScreen> {
     return _items.values.every((item) => item.isOk != null);
   }
 
+  /// 一括で「良」に設定
+  void _setAllToOk() {
+    setState(() {
+      for (var key in _items.keys) {
+        _items[key] = _items[key]!.copyWith(
+          isOk: true,
+          note: '', // 備考をクリア
+        );
+        _noteControllers[key]?.clear(); // 備考欄をクリア
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('すべての項目を「良」に設定しました'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   /// 良/否のカウント
   Map<String, int> _getCounts() {
     int okCount = 0;
@@ -265,32 +286,53 @@ class _VehicleInspectionScreenState extends State<VehicleInspectionScreen> {
               ),
             ],
           ),
-          child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _submitInspection,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isAllChecked() ? Colors.blue : Colors.grey,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    _isAllChecked() ? '点検完了' : 'すべての項目をチェックしてください',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 一括「良」ボタン
+              OutlinedButton.icon(
+                onPressed: _isSubmitting ? null : _setAllToOk,
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('すべて良にする'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green,
+                  side: const BorderSide(color: Colors.green),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 点検完了ボタン
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitInspection,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isAllChecked() ? Colors.blue : Colors.grey,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        _isAllChecked() ? '点検完了' : 'すべての項目をチェックしてください',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
