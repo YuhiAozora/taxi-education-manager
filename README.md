@@ -216,3 +216,4 @@ firebase deploy --only hosting
 
 フィードバックや改善要望は、GitHubのIssuesまでお願いします。
 # Firestore移行完了 (Fri Feb 13 02:25:31 UTC 2026)
+
