@@ -58,9 +58,14 @@ class _VehicleInspectionScreenState extends State<VehicleInspectionScreen> {
   void _setAllToOk() {
     setState(() {
       for (var key in _items.keys) {
-        _items[key] = _items[key]!.copyWith(
+        final item = _items[key]!;
+        _items[key] = InspectionItem(
+          category: item.category,
+          itemName: item.itemName,
+          detail: item.detail,
+          order: item.order,
           isOk: true,
-          note: '', // 備考をクリア
+          note: null, // 備考をクリア
         );
         _noteControllers[key]?.clear(); // 備考欄をクリア
       }

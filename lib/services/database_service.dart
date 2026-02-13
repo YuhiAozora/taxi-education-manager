@@ -716,7 +716,7 @@ class DatabaseService {
         'ngCount': inspection.ngCount,
         'isCompleted': inspection.isCompleted,
         'items': itemsMap,
-        'createdAt': FieldValue.serverTimestamp(),
+        'createdAt': Timestamp.fromDate(inspection.createdAt),
       });
       
       if (kDebugMode) {
