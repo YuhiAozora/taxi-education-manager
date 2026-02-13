@@ -692,87 +692,59 @@ class DatabaseService {
   
   // ==================== Vehicle Inspection Operations ====================
   
-  /// Save vehicle inspection (Web版ではLocalStorageに保存)
+  /// Save vehicle inspection (Firestoreに保存)
   static Future<void> saveVehicleInspection(dynamic inspection) async {
-    if (kIsWeb) {
-      try {
-        // LocalStorageから既存データを取得
-        final storageKey = 'vehicle_inspections_${inspection.userId}';
-        final existingData = html.window.localStorage[storageKey];
-        
-        List<dynamic> inspections = [];
-        if (existingData != null) {
-          inspections = jsonDecode(existingData) as List<dynamic>;
-        }
-        
-        // 新しい点検データを追加
-        inspections.add({
-          'id': inspection.id,
-          'userId': inspection.userId,
-          'companyId': inspection.companyId,
-          'inspectionDate': inspection.inspectionDate.toIso8601String(),
-          'okCount': inspection.okCount,
-          'ngCount': inspection.ngCount,
-          'isCompleted': inspection.isCompleted,
-          'items': inspection.items.map((key, value) => MapEntry(key, {
-            'category': value.category,
-            'itemName': value.itemName,
-            'detail': value.detail,
-            'order': value.order,
-            'isOk': value.isOk,
-            'note': value.note,
-          })),
-        });
-        
-        // LocalStorageに保存
-        html.window.localStorage[storageKey] = jsonEncode(inspections);
-        
-        if (kDebugMode) {
-          debugPrint('✅ Vehicle inspection saved to LocalStorage');
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Failed to save vehicle inspection: $e');
-        }
-        rethrow;
-      }
-    } else {
-      // モバイル版ではFirestoreに保存
-      await _firestore.collection('vehicle_inspections').add({
+    try {
+      // itemsをMap形式に変換
+      final itemsMap = <String, Map<String, dynamic>>{};
+      inspection.items.forEach((key, value) {
+        itemsMap[key] = {
+          'category': value.category,
+          'itemName': value.itemName,
+          'detail': value.detail,
+          'order': value.order,
+          'isOk': value.isOk,
+          'note': value.note,
+        };
+      });
+      
+      await _firestore.collection('vehicle_inspections').doc(inspection.id).set({
         'userId': inspection.userId,
         'companyId': inspection.companyId,
-        'inspectionDate': inspection.inspectionDate,
+        'inspectionDate': Timestamp.fromDate(inspection.inspectionDate),
         'okCount': inspection.okCount,
         'ngCount': inspection.ngCount,
         'isCompleted': inspection.isCompleted,
+        'items': itemsMap,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      
+      if (kDebugMode) {
+        debugPrint('✅ Vehicle inspection saved to Firestore: ${inspection.id}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to save vehicle inspection: $e');
+      }
+      rethrow;
     }
-    
-    await Future.delayed(const Duration(milliseconds: 300));
   }
   
   /// Get vehicle inspections by user
   static Future<List> getVehicleInspections(String userId) async {
-    if (kIsWeb) {
-      try {
-        final storageKey = 'vehicle_inspections_$userId';
-        final data = html.window.localStorage[storageKey];
+    try {
+      final querySnapshot = await _firestore
+          .collection('vehicle_inspections')
+          .where('userId', isEqualTo: userId)
+          .get();
+      
+      final inspections = querySnapshot.docs.map((doc) {
+        final data = doc.data();
         
-        if (data == null) {
-          if (kDebugMode) {
-            debugPrint('📋 No vehicle inspections found in LocalStorage');
-          }
-          return [];
-        }
-        
-        final List<dynamic> inspectionsJson = jsonDecode(data) as List<dynamic>;
-        
-        // JSON から VehicleInspection オブジェクトに変換
-        final inspections = inspectionsJson.map((json) {
-          // items を Map<String, InspectionItem> に変換
-          final itemsMap = <String, InspectionItem>{};
-          final items = json['items'] as Map<String, dynamic>;
+        // items を Map<String, InspectionItem> に変換
+        final itemsMap = <String, InspectionItem>{};
+        if (data['items'] != null) {
+          final items = data['items'] as Map<String, dynamic>;
           items.forEach((key, value) {
             itemsMap[key] = InspectionItem(
               category: value['category'] as String,
@@ -783,174 +755,74 @@ class DatabaseService {
               note: value['note'] as String?,
             );
           });
-          
-          return VehicleInspection(
-            id: json['id'] as String,
-            userId: json['userId'] as String,
-            companyId: json['companyId'] as String,
-            inspectionDate: DateTime.parse(json['inspectionDate'] as String),
-            items: itemsMap,
-            okCount: json['okCount'] as int,
-            ngCount: json['ngCount'] as int,
-            isCompleted: json['isCompleted'] as bool,
-          );
-        }).toList();
-        
-        // 日付順にソート（新しい順）
-        inspections.sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
-        
-        if (kDebugMode) {
-          debugPrint('✅ Loaded ${inspections.length} vehicle inspections from LocalStorage');
         }
         
-        return inspections;
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Failed to load vehicle inspections: $e');
-        }
-        return [];
-      }
-    } else {
-      // モバイル版ではFirestoreから取得
-      final querySnapshot = await _firestore
-          .collection('vehicle_inspections')
-          .where('userId', isEqualTo: userId)
-          .orderBy('inspectionDate', descending: true)
-          .get();
-      
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
         return VehicleInspection(
           id: doc.id,
           userId: data['userId'] as String,
           companyId: data['companyId'] as String,
           inspectionDate: (data['inspectionDate'] as Timestamp).toDate(),
-          items: {},
-          okCount: data['okCount'] as int? ?? 0,
-          ngCount: data['ngCount'] as int? ?? 0,
-          isCompleted: data['isCompleted'] as bool? ?? false,
+          items: itemsMap,
+          okCount: data['okCount'] as int,
+          ngCount: data['ngCount'] as int,
+          isCompleted: data['isCompleted'] as bool,
         );
       }).toList();
+      
+      // 日付順にソート（新しい順）
+      inspections.sort((a, b) => b.inspectionDate.compareTo(a.inspectionDate));
+      
+      if (kDebugMode) {
+        debugPrint('✅ Loaded ${inspections.length} vehicle inspections from Firestore');
+      }
+      
+      return inspections;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load vehicle inspections: $e');
+      }
+      return [];
     }
   }
 
   // ==================== Leave Request Operations ====================
   
-  /// Save leave request (Web版ではLocalStorageに保存)
+  /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(dynamic request) async {
-    if (kIsWeb) {
-      try {
-        // LocalStorageから既存データを取得
-        final storageKey = 'leave_requests_${request.userId}';
-        final existingData = html.window.localStorage[storageKey];
-        
-        List<dynamic> requests = [];
-        if (existingData != null) {
-          requests = jsonDecode(existingData) as List<dynamic>;
-        }
-        
-        // 新しい申請データを追加
-        requests.add({
-          'id': request.id,
-          'userId': request.userId,
-          'companyId': request.companyId,
-          'type': request.type.toString(),
-          'startDate': request.startDate.toIso8601String(),
-          'endDate': request.endDate.toIso8601String(),
-          'reason': request.reason,
-          'status': request.status.toString(),
-          'createdAt': request.createdAt.toIso8601String(),
-          'approverComment': request.approverComment,
-          'approvedAt': request.approvedAt?.toIso8601String(),
-        });
-        
-        // LocalStorageに保存
-        html.window.localStorage[storageKey] = jsonEncode(requests);
-        
-        if (kDebugMode) {
-          debugPrint('✅ Leave request saved to LocalStorage');
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Failed to save leave request: $e');
-        }
-        rethrow;
-      }
-    } else {
-      // モバイル版ではFirestoreに保存
-      await _firestore.collection('leave_requests').add({
+    try {
+      await _firestore.collection('leave_requests').doc(request.id).set({
         'userId': request.userId,
         'companyId': request.companyId,
         'type': request.type.toString(),
-        'startDate': request.startDate,
-        'endDate': request.endDate,
+        'startDate': Timestamp.fromDate(request.startDate),
+        'endDate': Timestamp.fromDate(request.endDate),
         'reason': request.reason,
         'status': request.status.toString(),
-        'createdAt': FieldValue.serverTimestamp(),
+        'createdAt': Timestamp.fromDate(request.createdAt),
+        'approverComment': request.approverComment,
+        'approvedAt': request.approvedAt != null ? Timestamp.fromDate(request.approvedAt!) : null,
       });
+      
+      if (kDebugMode) {
+        debugPrint('✅ Leave request saved to Firestore: ${request.id}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to save leave request: $e');
+      }
+      rethrow;
     }
-    
-    await Future.delayed(const Duration(milliseconds: 300));
   }
   
-  /// Get leave requests by employee (Web版ではLocalStorageから取得)
+  /// Get leave requests by employee (Firestoreから取得)
   static Future<List> getLeaveRequestsByEmployee(String employeeNumber) async {
-    if (kIsWeb) {
-      try {
-        final storageKey = 'leave_requests_$employeeNumber';
-        final data = html.window.localStorage[storageKey];
-        
-        if (data == null) {
-          if (kDebugMode) {
-            debugPrint('📋 No leave requests found in LocalStorage');
-          }
-          return [];
-        }
-        
-        final List<dynamic> requestsJson = jsonDecode(data) as List<dynamic>;
-        
-        // JSON から LeaveRequest オブジェクトに変換
-        final requests = requestsJson.map((json) {
-          return LeaveRequest(
-            id: json['id'] as String,
-            userId: json['userId'] as String,
-            companyId: json['companyId'] as String,
-            type: _parseLeaveType(json['type'] as String),
-            startDate: DateTime.parse(json['startDate'] as String),
-            endDate: DateTime.parse(json['endDate'] as String),
-            reason: json['reason'] as String,
-            status: _parseLeaveStatus(json['status'] as String),
-            createdAt: DateTime.parse(json['createdAt'] as String),
-            approverComment: json['approverComment'] as String?,
-            approvedAt: json['approvedAt'] != null 
-                ? DateTime.parse(json['approvedAt'] as String)
-                : null,
-          );
-        }).toList();
-        
-        // 作成日順にソート（新しい順）
-        requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        
-        if (kDebugMode) {
-          debugPrint('✅ Loaded ${requests.length} leave requests from LocalStorage');
-        }
-        
-        return requests;
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('❌ Failed to load leave requests: $e');
-        }
-        return [];
-      }
-    } else {
-      // モバイル版ではFirestoreから取得
+    try {
       final querySnapshot = await _firestore
           .collection('leave_requests')
           .where('userId', isEqualTo: employeeNumber)
-          .orderBy('createdAt', descending: true)
           .get();
       
-      return querySnapshot.docs.map((doc) {
+      final requests = querySnapshot.docs.map((doc) {
         final data = doc.data();
         return LeaveRequest(
           id: doc.id,
@@ -962,8 +834,24 @@ class DatabaseService {
           reason: data['reason'] as String,
           status: _parseLeaveStatus(data['status'] as String),
           createdAt: (data['createdAt'] as Timestamp).toDate(),
+          approverComment: data['approverComment'] as String?,
+          approvedAt: data['approvedAt'] != null ? (data['approvedAt'] as Timestamp).toDate() : null,
         );
       }).toList();
+      
+      // 作成日順にソート（新しい順）
+      requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      if (kDebugMode) {
+        debugPrint('✅ Loaded ${requests.length} leave requests from Firestore');
+      }
+      
+      return requests;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load leave requests: $e');
+      }
+      return [];
     }
   }
   
@@ -999,14 +887,108 @@ class DatabaseService {
     }
   }
   
+  // ヘルパーメソッド: 文字列をAccidentTypeに変換
+  static AccidentType _parseAccidentType(String typeStr) {
+    switch (typeStr) {
+      case 'AccidentType.collision':
+      case 'collision':
+        return AccidentType.collision;
+      case 'AccidentType.personal':
+      case 'personal':
+        return AccidentType.personal;
+      case 'AccidentType.property':
+      case 'property':
+        return AccidentType.property;
+      case 'AccidentType.selfAccident':
+      case 'selfAccident':
+        return AccidentType.selfAccident;
+      case 'AccidentType.parking':
+      case 'parking':
+        return AccidentType.parking;
+      case 'AccidentType.other':
+      case 'other':
+        return AccidentType.other;
+      default:
+        return AccidentType.other;
+    }
+  }
+  
+  // ヘルパーメソッド: 文字列をAccidentSeverityに変換
+  static AccidentSeverity _parseAccidentSeverity(String severityStr) {
+    switch (severityStr) {
+      case 'AccidentSeverity.minor':
+      case 'minor':
+        return AccidentSeverity.minor;
+      case 'AccidentSeverity.moderate':
+      case 'moderate':
+        return AccidentSeverity.moderate;
+      case 'AccidentSeverity.serious':
+      case 'serious':
+        return AccidentSeverity.serious;
+      case 'AccidentSeverity.critical':
+      case 'critical':
+        return AccidentSeverity.critical;
+      default:
+        return AccidentSeverity.minor;
+    }
+  }
+  
+  // ヘルパーメソッド: 文字列をAccidentStatusに変換
+  static AccidentStatus _parseAccidentStatus(String statusStr) {
+    switch (statusStr) {
+      case 'AccidentStatus.pending':
+      case 'pending':
+        return AccidentStatus.pending;
+      case 'AccidentStatus.processing':
+      case 'processing':
+        return AccidentStatus.processing;
+      case 'AccidentStatus.completed':
+      case 'completed':
+        return AccidentStatus.completed;
+      default:
+        return AccidentStatus.pending;
+    }
+  }
+  
   /// Get all leave requests for company admin
   static Future<List> getAllLeaveRequests(String companyId) async {
-    // Web版ではダミーデータを返す（空リスト）
-    if (kDebugMode) {
-      debugPrint('📋 Getting all leave requests for company: $companyId');
+    try {
+      final querySnapshot = await _firestore
+          .collection('leave_requests')
+          .where('companyId', isEqualTo: companyId)
+          .get();
+      
+      final requests = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return LeaveRequest(
+          id: doc.id,
+          userId: data['userId'] as String,
+          companyId: data['companyId'] as String,
+          type: _parseLeaveType(data['type'] as String),
+          startDate: (data['startDate'] as Timestamp).toDate(),
+          endDate: (data['endDate'] as Timestamp).toDate(),
+          reason: data['reason'] as String,
+          status: _parseLeaveStatus(data['status'] as String),
+          createdAt: (data['createdAt'] as Timestamp).toDate(),
+          approverComment: data['approverComment'] as String?,
+          approvedAt: data['approvedAt'] != null ? (data['approvedAt'] as Timestamp).toDate() : null,
+        );
+      }).toList();
+      
+      // 作成日順にソート（新しい順）
+      requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      if (kDebugMode) {
+        debugPrint('✅ Loaded ${requests.length} leave requests for company from Firestore');
+      }
+      
+      return requests;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load leave requests: $e');
+      }
+      return [];
     }
-    await Future.delayed(const Duration(milliseconds: 500));
-    return <dynamic>[];
   }
   
   /// Update leave request status
@@ -1016,11 +998,22 @@ class DatabaseService {
     String approverName,
     String? approverComment,
   ) async {
-    // Web版ではダミー処理
-    if (kDebugMode) {
-      debugPrint('✅ Leave request status updated (demo mode): $requestId -> $status');
+    try {
+      await _firestore.collection('leave_requests').doc(requestId).update({
+        'status': status.toString(),
+        'approverComment': approverComment,
+        'approvedAt': Timestamp.now(),
+      });
+      
+      if (kDebugMode) {
+        debugPrint('✅ Leave request status updated in Firestore: $requestId -> $status');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to update leave request status: $e');
+      }
+      rethrow;
     }
-    await Future.delayed(const Duration(milliseconds: 500));
   }
   
   /// Get leave requests by user ID (alias for getLeaveRequestsByEmployee)
@@ -1044,31 +1037,126 @@ class DatabaseService {
   
   /// Save accident report
   static Future<void> saveAccidentReport(dynamic report) async {
-    // Web版ではローカルに保存（ダミー処理）
-    if (kDebugMode) {
-      debugPrint('💾 Saving accident report (demo mode)');
+    try {
+      await _firestore.collection('accident_reports').doc(report.id).set({
+        'driverId': report.driverId,
+        'driverName': report.driverName,
+        'companyId': report.companyId,
+        'accidentDate': Timestamp.fromDate(report.accidentDate),
+        'location': report.location,
+        'type': report.type.name,
+        'severity': report.severity.name,
+        'description': report.description,
+        'otherPartyInfo': report.otherPartyInfo,
+        'damageDescription': report.damageDescription,
+        'policeReport': report.policeReport,
+        'status': report.status.name,
+        'createdAt': Timestamp.fromDate(report.createdAt),
+        'adminComment': report.adminComment,
+        'processedAt': report.processedAt != null ? Timestamp.fromDate(report.processedAt!) : null,
+      });
+      
+      if (kDebugMode) {
+        debugPrint('✅ Accident report saved to Firestore: ${report.id}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to save accident report: $e');
+      }
+      rethrow;
     }
-    await Future.delayed(const Duration(milliseconds: 500));
   }
   
   /// Get accident reports by driver
   static Future<List> getAccidentReportsByDriver(String driverId) async {
-    // Web版ではダミーデータを返す（空リスト）
-    if (kDebugMode) {
-      debugPrint('📋 Getting accident reports for: $driverId');
+    try {
+      final querySnapshot = await _firestore
+          .collection('accident_reports')
+          .where('driverId', isEqualTo: driverId)
+          .get();
+      
+      final reports = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return AccidentReport(
+          id: doc.id,
+          driverId: data['driverId'] as String,
+          driverName: data['driverName'] as String,
+          companyId: data['companyId'] as String,
+          accidentDate: (data['accidentDate'] as Timestamp).toDate(),
+          location: data['location'] as String,
+          type: _parseAccidentType(data['type'] as String),
+          severity: _parseAccidentSeverity(data['severity'] as String),
+          description: data['description'] as String,
+          otherPartyInfo: data['otherPartyInfo'] as String?,
+          damageDescription: data['damageDescription'] as String?,
+          policeReport: data['policeReport'] as String?,
+          status: _parseAccidentStatus(data['status'] as String),
+          createdAt: (data['createdAt'] as Timestamp).toDate(),
+          adminComment: data['adminComment'] as String?,
+          processedAt: data['processedAt'] != null ? (data['processedAt'] as Timestamp).toDate() : null,
+        );
+      }).toList();
+      
+      // 日付順にソート（新しい順）
+      reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      if (kDebugMode) {
+        debugPrint('✅ Loaded ${reports.length} accident reports from Firestore');
+      }
+      
+      return reports;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load accident reports: $e');
+      }
+      return [];
     }
-    await Future.delayed(const Duration(milliseconds: 500));
-    return <dynamic>[];
   }
   
   /// Get all accident reports for company
   static Future<List> getAllAccidentReports(String companyId) async {
-    // Web版ではダミーデータを返す（空リスト）
-    if (kDebugMode) {
-      debugPrint('📋 Getting all accident reports for company: $companyId');
+    try {
+      final querySnapshot = await _firestore
+          .collection('accident_reports')
+          .where('companyId', isEqualTo: companyId)
+          .get();
+      
+      final reports = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return AccidentReport(
+          id: doc.id,
+          driverId: data['driverId'] as String,
+          driverName: data['driverName'] as String,
+          companyId: data['companyId'] as String,
+          accidentDate: (data['accidentDate'] as Timestamp).toDate(),
+          location: data['location'] as String,
+          type: _parseAccidentType(data['type'] as String),
+          severity: _parseAccidentSeverity(data['severity'] as String),
+          description: data['description'] as String,
+          otherPartyInfo: data['otherPartyInfo'] as String?,
+          damageDescription: data['damageDescription'] as String?,
+          policeReport: data['policeReport'] as String?,
+          status: _parseAccidentStatus(data['status'] as String),
+          createdAt: (data['createdAt'] as Timestamp).toDate(),
+          adminComment: data['adminComment'] as String?,
+          processedAt: data['processedAt'] != null ? (data['processedAt'] as Timestamp).toDate() : null,
+        );
+      }).toList();
+      
+      // 日付順にソート（新しい順）
+      reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      if (kDebugMode) {
+        debugPrint('✅ Loaded ${reports.length} accident reports for company from Firestore');
+      }
+      
+      return reports;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Failed to load accident reports: $e');
+      }
+      return [];
     }
-    await Future.delayed(const Duration(milliseconds: 500));
-    return <dynamic>[];
   }
   
   /// Update accident report status
