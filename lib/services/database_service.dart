@@ -763,9 +763,12 @@ class DatabaseService {
           companyId: data['companyId'] as String,
           inspectionDate: (data['inspectionDate'] as Timestamp).toDate(),
           items: itemsMap,
-          okCount: data['okCount'] as int,
-          ngCount: data['ngCount'] as int,
-          isCompleted: data['isCompleted'] as bool,
+          okCount: data['okCount'] as int? ?? 0,
+          ngCount: data['ngCount'] as int? ?? 0,
+          isCompleted: data['isCompleted'] as bool? ?? false,
+          createdAt: data['createdAt'] != null 
+              ? (data['createdAt'] as Timestamp).toDate() 
+              : DateTime.now(),
         );
       }).toList();
       

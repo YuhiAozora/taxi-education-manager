@@ -95,6 +95,7 @@ class _VehicleInspectionScreenState extends State<VehicleInspectionScreen> {
         isCompleted: true,
         okCount: counts['ok']!,
         ngCount: counts['ng']!,
+        createdAt: DateTime.now(),
       );
 
       // データ保存（Web版ではローカルストレージ、モバイル版ではFirestore）
