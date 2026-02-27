@@ -211,39 +211,51 @@ class VehicleInspection {
     };
   }
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'userId': userId as String,
-      'companyId': companyId as String,
-      'inspectionDate': Timestamp.fromDate(inspectionDate) as Timestamp,
-      'items': items.map((key, value) => MapEntry<String, dynamic>(key as String, value.toJson() as Map<String, dynamic>)),
-      'isCompleted': isCompleted as bool,
-      'okCount': okCount as int,
-      'ngCount': ngCount as int,
-      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
+  /// Firestore への保存用（DateTime は Timestamp に変換）
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'companyId': companyId,
+      'inspectionDate': Timestamp.fromDate(inspectionDate),
+      'items': items.map((key, value) => MapEntry(key, value.toFirestore())),
+      'isCompleted': isCompleted,
+      'okCount': okCount,
+      'ngCount': ngCount,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
-  factory VehicleInspection.fromJson(Map<String, dynamic> json, String id) {
-    final itemsData = json['items'] as Map<String, dynamic>? ?? {};
+  /// Firestore からの取得用（Timestamp は DateTime に変換）
+  factory VehicleInspection.fromFirestore(Map<String, dynamic> data, String id) {
+    final itemsData = data['items'] as Map<String, dynamic>? ?? {};
     final items = itemsData.map(
       (key, value) => MapEntry(
         key,
-        InspectionItem.fromJson(value as Map<String, dynamic>),
+        InspectionItem.fromFirestore(value as Map<String, dynamic>),
       ),
     );
 
     return VehicleInspection(
       id: id,
-      userId: json['userId'] as String? ?? '',
-      companyId: json['companyId'] as String? ?? '',
-      inspectionDate: (json['inspectionDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      userId: data['userId'] as String? ?? '',
+      companyId: data['companyId'] as String? ?? '',
+      inspectionDate: (data['inspectionDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       items: items,
-      isCompleted: json['isCompleted'] as bool? ?? false,
-      okCount: json['okCount'] as int? ?? 0,
-      ngCount: json['ngCount'] as int? ?? 0,
-      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isCompleted: data['isCompleted'] as bool? ?? false,
+      okCount: data['okCount'] as int? ?? 0,
+      ngCount: data['ngCount'] as int? ?? 0,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
+  }
+
+  @Deprecated('Use toFirestore() instead')
+  Map<String, dynamic> toJson() {
+    return toFirestore();
+  }
+
+  @Deprecated('Use fromFirestore() instead')
+  factory VehicleInspection.fromJson(Map<String, dynamic> json, String id) {
+    return VehicleInspection.fromFirestore(json, id);
   }
 }
 
@@ -265,26 +277,38 @@ class InspectionItem {
     this.note,
   });
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'category': category as String,
-      'itemName': itemName as String,
-      'detail': detail as String,
-      'order': order as int,
-      'isOk': isOk as bool?,
-      'note': note as String?,
+  /// Firestore への保存用
+  Map<String, dynamic> toFirestore() {
+    return {
+      'category': category,
+      'itemName': itemName,
+      'detail': detail,
+      'order': order,
+      'isOk': isOk,
+      'note': note,
     };
   }
 
-  factory InspectionItem.fromJson(Map<String, dynamic> json) {
+  /// Firestore からの取得用
+  factory InspectionItem.fromFirestore(Map<String, dynamic> data) {
     return InspectionItem(
-      category: json['category'] as String,
-      itemName: json['itemName'] as String,
-      detail: json['detail'] as String,
-      order: json['order'] as int,
-      isOk: json['isOk'] as bool?,
-      note: json['note'] as String?,
+      category: data['category'] as String,
+      itemName: data['itemName'] as String,
+      detail: data['detail'] as String,
+      order: data['order'] as int,
+      isOk: data['isOk'] as bool?,
+      note: data['note'] as String?,
     );
+  }
+
+  @Deprecated('Use toFirestore() instead')
+  Map<String, dynamic> toJson() {
+    return toFirestore();
+  }
+
+  @Deprecated('Use fromFirestore() instead')
+  factory InspectionItem.fromJson(Map<String, dynamic> json) {
+    return InspectionItem.fromFirestore(json);
   }
 
   InspectionItem copyWith({

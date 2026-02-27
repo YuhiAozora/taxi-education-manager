@@ -38,43 +38,55 @@ class LeaveRequest {
     return endDate.difference(startDate).inDays + 1;
   }
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'userId': userId as String,
-      'companyId': companyId as String,
-      'type': type.name as String,
-      'startDate': Timestamp.fromDate(startDate) as Timestamp,
-      'endDate': Timestamp.fromDate(endDate) as Timestamp,
-      'reason': reason as String,
-      'status': status.name as String,
-      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
-      'approverComment': approverComment as String?,
-      'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) as Timestamp : null,
+  /// Firestore への保存用（DateTime は Timestamp に変換）
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'companyId': companyId,
+      'type': type.name,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'reason': reason,
+      'status': status.name,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'approverComment': approverComment,
+      'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) : null,
     };
   }
 
-  factory LeaveRequest.fromJson(Map<String, dynamic> json, String id) {
+  /// Firestore からの取得用（Timestamp は DateTime に変換）
+  factory LeaveRequest.fromFirestore(Map<String, dynamic> data, String id) {
     return LeaveRequest(
       id: id,
-      userId: json['userId'] as String,
-      companyId: json['companyId'] as String,
+      userId: data['userId'] as String,
+      companyId: data['companyId'] as String,
       type: LeaveType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == data['type'],
         orElse: () => LeaveType.paidLeave,
       ),
-      startDate: (json['startDate'] as Timestamp).toDate(),
-      endDate: (json['endDate'] as Timestamp).toDate(),
-      reason: json['reason'] as String,
+      startDate: (data['startDate'] as Timestamp).toDate(),
+      endDate: (data['endDate'] as Timestamp).toDate(),
+      reason: data['reason'] as String,
       status: LeaveStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name == data['status'],
         orElse: () => LeaveStatus.pending,
       ),
-      createdAt: (json['createdAt'] as Timestamp).toDate(),
-      approverComment: json['approverComment'] as String?,
-      approvedAt: json['approvedAt'] != null
-          ? (json['approvedAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      approverComment: data['approverComment'] as String?,
+      approvedAt: data['approvedAt'] != null
+          ? (data['approvedAt'] as Timestamp).toDate()
           : null,
     );
+  }
+
+  @Deprecated('Use toFirestore() instead')
+  Map<String, dynamic> toJson() {
+    return toFirestore();
+  }
+
+  @Deprecated('Use fromFirestore() instead')
+  factory LeaveRequest.fromJson(Map<String, dynamic> json, String id) {
+    return LeaveRequest.fromFirestore(json, id);
   }
 }
 

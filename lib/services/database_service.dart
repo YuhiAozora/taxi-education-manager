@@ -695,12 +695,12 @@ class DatabaseService {
   /// Save vehicle inspection (Firestoreに保存)
   static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
-      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(inspection.toJson()))
+      final ref = _firestore.collection('vehicle_inspections').withConverter<VehicleInspection>(
+        fromFirestore: (snapshot, _) => VehicleInspection.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (inspection, _) => inspection.toFirestore(),
       );
       
-      await _firestore.collection('vehicle_inspections').doc(inspection.id).set(data);
+      await ref.doc(inspection.id).set(inspection);
       
       if (kDebugMode) {
         debugPrint('✅ Vehicle inspection saved to Firestore: ${inspection.id}');
@@ -776,12 +776,12 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(request.toJson()))
+      final ref = _firestore.collection('leave_requests').withConverter<LeaveRequest>(
+        fromFirestore: (snapshot, _) => LeaveRequest.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (request, _) => request.toFirestore(),
       );
       
-      await _firestore.collection('leave_requests').doc(request.id).set(data);
+      await ref.doc(request.id).set(request);
       
       if (kDebugMode) {
         debugPrint('✅ Leave request saved to Firestore: ${request.id}');
@@ -1018,12 +1018,12 @@ class DatabaseService {
   /// Save accident report
   static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
-      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(report.toJson()))
+      final ref = _firestore.collection('accident_reports').withConverter<AccidentReport>(
+        fromFirestore: (snapshot, _) => AccidentReport.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (report, _) => report.toFirestore(),
       );
       
-      await _firestore.collection('accident_reports').doc(report.id).set(data);
+      await ref.doc(report.id).set(report);
       
       if (kDebugMode) {
         debugPrint('✅ Accident report saved to Firestore: ${report.id}');

@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// 事故報告
 class AccidentReport {
   final String id;
@@ -40,56 +38,68 @@ class AccidentReport {
     this.processedAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'driverId': driverId as String,
-      'driverName': driverName as String,
-      'companyId': companyId as String,
-      'accidentDate': Timestamp.fromDate(accidentDate) as Timestamp,
-      'location': location as String,
-      'type': type.name as String,
-      'severity': severity.name as String,
-      'description': description as String,
-      'otherPartyInfo': otherPartyInfo as String?,
-      'damageDescription': damageDescription as String?,
-      'policeReport': policeReport as String?,
-      'status': status.name as String,
-      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
-      'adminComment': adminComment as String?,
-      'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) as Timestamp : null,
+  /// Firestore への保存用（DateTime は Timestamp に変換）
+  Map<String, dynamic> toFirestore() {
+    return {
+      'driverId': driverId,
+      'driverName': driverName,
+      'companyId': companyId,
+      'accidentDate': Timestamp.fromDate(accidentDate),
+      'location': location,
+      'type': type.name,
+      'severity': severity.name,
+      'description': description,
+      'otherPartyInfo': otherPartyInfo,
+      'damageDescription': damageDescription,
+      'policeReport': policeReport,
+      'status': status.name,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'adminComment': adminComment,
+      'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) : null,
     };
   }
 
-  factory AccidentReport.fromJson(Map<String, dynamic> json, String id) {
+  /// Firestore からの取得用（Timestamp は DateTime に変換）
+  factory AccidentReport.fromFirestore(Map<String, dynamic> data, String id) {
     return AccidentReport(
       id: id,
-      driverId: json['driverId'] as String,
-      driverName: json['driverName'] as String,
-      companyId: json['companyId'] as String,
-      accidentDate: (json['accidentDate'] as Timestamp).toDate(),
-      location: json['location'] as String,
+      driverId: data['driverId'] as String,
+      driverName: data['driverName'] as String,
+      companyId: data['companyId'] as String,
+      accidentDate: (data['accidentDate'] as Timestamp).toDate(),
+      location: data['location'] as String,
       type: AccidentType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == data['type'],
         orElse: () => AccidentType.collision,
       ),
       severity: AccidentSeverity.values.firstWhere(
-        (e) => e.name == json['severity'],
+        (e) => e.name == data['severity'],
         orElse: () => AccidentSeverity.minor,
       ),
-      description: json['description'] as String,
-      otherPartyInfo: json['otherPartyInfo'] as String?,
-      damageDescription: json['damageDescription'] as String?,
-      policeReport: json['policeReport'] as String?,
+      description: data['description'] as String,
+      otherPartyInfo: data['otherPartyInfo'] as String?,
+      damageDescription: data['damageDescription'] as String?,
+      policeReport: data['policeReport'] as String?,
       status: AccidentStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name == data['status'],
         orElse: () => AccidentStatus.pending,
       ),
-      createdAt: (json['createdAt'] as Timestamp).toDate(),
-      adminComment: json['adminComment'] as String?,
-      processedAt: json['processedAt'] != null
-          ? (json['processedAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      adminComment: data['adminComment'] as String?,
+      processedAt: data['processedAt'] != null
+          ? (data['processedAt'] as Timestamp).toDate()
           : null,
     );
+  }
+
+  @Deprecated('Use toFirestore() instead')
+  Map<String, dynamic> toJson() {
+    return toFirestore();
+  }
+
+  @Deprecated('Use fromFirestore() instead')
+  factory AccidentReport.fromJson(Map<String, dynamic> json, String id) {
+    return AccidentReport.fromFirestore(json, id);
   }
 }
 
