@@ -340,7 +340,7 @@ class DatabaseService {
           id: doc.id,
           userId: data['user_id'] as String,
           type: MedicalCheckupType.values.firstWhere(
-            (e) => e.toString().split('.').last == data['checkup_type'],
+            (e) => e.name == data['checkup_type'],
           ),
           checkupDate: (data['checkup_date'] as Timestamp).toDate(),
           nextDueDate: (data['next_due_date'] as Timestamp).toDate(),
@@ -370,7 +370,7 @@ class DatabaseService {
           id: doc.id,
           userId: data['user_id'] as String,
           type: MedicalCheckupType.values.firstWhere(
-            (e) => e.toString().split('.').last == data['checkup_type'],
+            (e) => e.name == data['checkup_type'],
           ),
           checkupDate: (data['checkup_date'] as Timestamp).toDate(),
           nextDueDate: (data['next_due_date'] as Timestamp).toDate(),
@@ -396,7 +396,7 @@ class DatabaseService {
         // New checkup
         await _firestore.collection('medical_checkups').add({
           'user_id': checkup.userId,
-          'checkup_type': checkup.type.toString().split('.').last,
+          'checkup_type': checkup.type.name,
           'checkup_date': Timestamp.fromDate(checkup.checkupDate),
           'next_due_date': Timestamp.fromDate(checkup.nextDueDate),
           'institution': checkup.institution,
@@ -408,7 +408,7 @@ class DatabaseService {
         // Update existing checkup
         await _firestore.collection('medical_checkups').doc(checkup.id).set({
           'user_id': checkup.userId,
-          'checkup_type': checkup.type.toString().split('.').last,
+          'checkup_type': checkup.type.name,
           'checkup_date': Timestamp.fromDate(checkup.checkupDate),
           'next_due_date': Timestamp.fromDate(checkup.nextDueDate),
           'institution': checkup.institution,
@@ -796,11 +796,11 @@ class DatabaseService {
       await _firestore.collection('leave_requests').doc(request.id).set({
         'userId': request.userId,
         'companyId': request.companyId,
-        'type': request.type.toString(),
+        'type': request.type.name,
         'startDate': Timestamp.fromDate(request.startDate),
         'endDate': Timestamp.fromDate(request.endDate),
         'reason': request.reason,
-        'status': request.status.toString(),
+        'status': request.status.name,
         'createdAt': Timestamp.fromDate(request.createdAt),
         'approverComment': request.approverComment,
         'approvedAt': request.approvedAt != null ? Timestamp.fromDate(request.approvedAt!) : null,
@@ -1003,7 +1003,7 @@ class DatabaseService {
   ) async {
     try {
       await _firestore.collection('leave_requests').doc(requestId).update({
-        'status': status.toString(),
+        'status': status.name,
         'approverComment': approverComment,
         'approvedAt': Timestamp.now(),
       });
