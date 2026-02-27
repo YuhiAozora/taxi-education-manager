@@ -693,31 +693,14 @@ class DatabaseService {
   // ==================== Vehicle Inspection Operations ====================
   
   /// Save vehicle inspection (Firestoreに保存)
-  static Future<void> saveVehicleInspection(dynamic inspection) async {
+  static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
-      // itemsをMap形式に変換
-      final itemsMap = <String, Map<String, dynamic>>{};
-      inspection.items.forEach((key, value) {
-        itemsMap[key] = {
-          'category': value.category,
-          'itemName': value.itemName,
-          'detail': value.detail,
-          'order': value.order,
-          'isOk': value.isOk,
-          'note': value.note,
-        };
-      });
+      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
+      final Map<String, dynamic> data = Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(inspection.toJson()))
+      );
       
-      await _firestore.collection('vehicle_inspections').doc(inspection.id).set({
-        'userId': inspection.userId,
-        'companyId': inspection.companyId,
-        'inspectionDate': Timestamp.fromDate(inspection.inspectionDate),
-        'okCount': inspection.okCount,
-        'ngCount': inspection.ngCount,
-        'isCompleted': inspection.isCompleted,
-        'items': itemsMap,
-        'createdAt': Timestamp.fromDate(inspection.createdAt),
-      });
+      await _firestore.collection('vehicle_inspections').doc(inspection.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Vehicle inspection saved to Firestore: ${inspection.id}');
@@ -791,9 +774,14 @@ class DatabaseService {
   // ==================== Leave Request Operations ====================
   
   /// Save leave request (Firestoreに保存)
-  static Future<void> saveLeaveRequest(dynamic request) async {
+  static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      await _firestore.collection('leave_requests').doc(request.id).set(request.toJson());
+      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
+      final Map<String, dynamic> data = Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(request.toJson()))
+      );
+      
+      await _firestore.collection('leave_requests').doc(request.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Leave request saved to Firestore: ${request.id}');
@@ -1028,25 +1016,14 @@ class DatabaseService {
   // ==================== Accident Report Operations ====================
   
   /// Save accident report
-  static Future<void> saveAccidentReport(dynamic report) async {
+  static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
-      await _firestore.collection('accident_reports').doc(report.id).set({
-        'driverId': report.driverId,
-        'driverName': report.driverName,
-        'companyId': report.companyId,
-        'accidentDate': Timestamp.fromDate(report.accidentDate),
-        'location': report.location,
-        'type': report.type.name,
-        'severity': report.severity.name,
-        'description': report.description,
-        'otherPartyInfo': report.otherPartyInfo,
-        'damageDescription': report.damageDescription,
-        'policeReport': report.policeReport,
-        'status': report.status.name,
-        'createdAt': Timestamp.fromDate(report.createdAt),
-        'adminComment': report.adminComment,
-        'processedAt': report.processedAt != null ? Timestamp.fromDate(report.processedAt!) : null,
-      });
+      // リリースビルドの型エラーを防ぐため、強制的にJSON変換
+      final Map<String, dynamic> data = Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(report.toJson()))
+      );
+      
+      await _firestore.collection('accident_reports').doc(report.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Accident report saved to Firestore: ${report.id}');
