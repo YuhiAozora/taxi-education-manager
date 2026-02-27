@@ -41,22 +41,22 @@ class AccidentReport {
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() {
-    return {
-      'driverId': driverId,
-      'driverName': driverName,
-      'companyId': companyId,
-      'accidentDate': Timestamp.fromDate(accidentDate),
-      'location': location,
-      'type': type.name,
-      'severity': severity.name,
-      'description': description,
-      'otherPartyInfo': otherPartyInfo,
-      'damageDescription': damageDescription,
-      'policeReport': policeReport,
-      'status': status.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'adminComment': adminComment,
-      'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) : null,
+    return <String, dynamic>{
+      'driverId': driverId as String,
+      'driverName': driverName as String,
+      'companyId': companyId as String,
+      'accidentDate': Timestamp.fromDate(accidentDate) as Timestamp,
+      'location': location as String,
+      'type': type.name as String,
+      'severity': severity.name as String,
+      'description': description as String,
+      'otherPartyInfo': otherPartyInfo as String?,
+      'damageDescription': damageDescription as String?,
+      'policeReport': policeReport as String?,
+      'status': status.name as String,
+      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
+      'adminComment': adminComment as String?,
+      'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) as Timestamp : null,
     };
   }
 

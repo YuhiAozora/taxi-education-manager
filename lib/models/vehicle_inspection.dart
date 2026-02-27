@@ -212,15 +212,15 @@ class VehicleInspection {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'userId': userId,
-      'companyId': companyId,
-      'inspectionDate': Timestamp.fromDate(inspectionDate),
-      'items': items.map((key, value) => MapEntry(key, value.toJson())),
-      'isCompleted': isCompleted,
-      'okCount': okCount,
-      'ngCount': ngCount,
-      'createdAt': Timestamp.fromDate(createdAt),
+    return <String, dynamic>{
+      'userId': userId as String,
+      'companyId': companyId as String,
+      'inspectionDate': Timestamp.fromDate(inspectionDate) as Timestamp,
+      'items': items.map((key, value) => MapEntry<String, dynamic>(key as String, value.toJson() as Map<String, dynamic>)),
+      'isCompleted': isCompleted as bool,
+      'okCount': okCount as int,
+      'ngCount': ngCount as int,
+      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
     };
   }
 
@@ -266,13 +266,13 @@ class InspectionItem {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'category': category,
-      'itemName': itemName,
-      'detail': detail,
-      'order': order,
-      'isOk': isOk,
-      'note': note,
+    return <String, dynamic>{
+      'category': category as String,
+      'itemName': itemName as String,
+      'detail': detail as String,
+      'order': order as int,
+      'isOk': isOk as bool?,
+      'note': note as String?,
     };
   }
 

@@ -39,17 +39,17 @@ class LeaveRequest {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'userId': userId,
-      'companyId': companyId,
-      'type': type.name,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'reason': reason,
-      'status': status.name,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'approverComment': approverComment,
-      'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) : null,
+    return <String, dynamic>{
+      'userId': userId as String,
+      'companyId': companyId as String,
+      'type': type.name as String,
+      'startDate': Timestamp.fromDate(startDate) as Timestamp,
+      'endDate': Timestamp.fromDate(endDate) as Timestamp,
+      'reason': reason as String,
+      'status': status.name as String,
+      'createdAt': Timestamp.fromDate(createdAt) as Timestamp,
+      'approverComment': approverComment as String?,
+      'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) as Timestamp : null,
     };
   }
 
