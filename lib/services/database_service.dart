@@ -793,18 +793,7 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(dynamic request) async {
     try {
-      await _firestore.collection('leave_requests').doc(request.id).set({
-        'userId': request.userId,
-        'companyId': request.companyId,
-        'type': request.type.name,
-        'startDate': Timestamp.fromDate(request.startDate),
-        'endDate': Timestamp.fromDate(request.endDate),
-        'reason': request.reason,
-        'status': request.status.name,
-        'createdAt': Timestamp.fromDate(request.createdAt),
-        'approverComment': request.approverComment,
-        'approvedAt': request.approvedAt != null ? Timestamp.fromDate(request.approvedAt!) : null,
-      });
+      await _firestore.collection('leave_requests').doc(request.id).set(request.toJson());
       
       if (kDebugMode) {
         debugPrint('✅ Leave request saved to Firestore: ${request.id}');
