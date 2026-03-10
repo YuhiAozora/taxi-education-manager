@@ -28,6 +28,10 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
   void initState() {
     super.initState();
     _loadMyRequests();
+    // テキスト入力時にUIを更新
+    _reasonController.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -67,7 +71,7 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       initialDate: isStartDate ? _startDate : _endDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      // locale: const Locale('ja', 'JP'), // Webでのエラー防止のためコメントアウト
+      locale: const Locale('ja', 'JP'),
     );
 
     if (picked != null) {
