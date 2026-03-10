@@ -696,7 +696,13 @@ class DatabaseService {
   static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
       final ref = _firestore.collection('vehicle_inspections').withConverter<VehicleInspection>(
-        fromFirestore: (snapshot, options) => VehicleInspection.fromFirestore(snapshot.data()!, snapshot.id),
+        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
+          final data = snapshot.data();
+          if (data == null) {
+            throw Exception('Document data is null');
+          }
+          return VehicleInspection.fromFirestore(data, snapshot.id);
+        },
         toFirestore: (VehicleInspection value, SetOptions? options) => value.toFirestore(),
       );
       
@@ -777,7 +783,13 @@ class DatabaseService {
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
       final ref = _firestore.collection('leave_requests').withConverter<LeaveRequest>(
-        fromFirestore: (snapshot, options) => LeaveRequest.fromFirestore(snapshot.data()!, snapshot.id),
+        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
+          final data = snapshot.data();
+          if (data == null) {
+            throw Exception('Document data is null');
+          }
+          return LeaveRequest.fromFirestore(data, snapshot.id);
+        },
         toFirestore: (LeaveRequest value, SetOptions? options) => value.toFirestore(),
       );
       
@@ -1019,7 +1031,13 @@ class DatabaseService {
   static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
       final ref = _firestore.collection('accident_reports').withConverter<AccidentReport>(
-        fromFirestore: (snapshot, options) => AccidentReport.fromFirestore(snapshot.data()!, snapshot.id),
+        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
+          final data = snapshot.data();
+          if (data == null) {
+            throw Exception('Document data is null');
+          }
+          return AccidentReport.fromFirestore(data, snapshot.id);
+        },
         toFirestore: (AccidentReport value, SetOptions? options) => value.toFirestore(),
       );
       
