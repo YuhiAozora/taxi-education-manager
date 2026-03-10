@@ -40,23 +40,40 @@ class AccidentReport {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    return <String, dynamic>{
-      'driverId': driverId as String,
-      'driverName': driverName as String,
-      'companyId': companyId as String,
-      'accidentDate': Timestamp.fromDate(accidentDate),
-      'location': location as String,
-      'type': (type.name) as String,
-      'severity': (severity.name) as String,
-      'description': description as String,
-      'otherPartyInfo': otherPartyInfo,
-      'damageDescription': damageDescription,
-      'policeReport': policeReport,
-      'status': (status.name) as String,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'adminComment': adminComment,
-      'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) : null,
-    };
+    final Map<String, dynamic> data = <String, dynamic>{};
+    
+    data['driverId'] = driverId;
+    data['driverName'] = driverName;
+    data['companyId'] = companyId;
+    data['accidentDate'] = Timestamp.fromDate(accidentDate);
+    data['location'] = location;
+    data['type'] = type.name;
+    data['severity'] = severity.name;
+    data['description'] = description;
+    data['status'] = status.name;
+    data['createdAt'] = Timestamp.fromDate(createdAt);
+    
+    if (otherPartyInfo != null) {
+      data['otherPartyInfo'] = otherPartyInfo;
+    }
+    
+    if (damageDescription != null) {
+      data['damageDescription'] = damageDescription;
+    }
+    
+    if (policeReport != null) {
+      data['policeReport'] = policeReport;
+    }
+    
+    if (adminComment != null) {
+      data['adminComment'] = adminComment;
+    }
+    
+    if (processedAt != null) {
+      data['processedAt'] = Timestamp.fromDate(processedAt!);
+    }
+    
+    return data;
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）

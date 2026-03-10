@@ -40,18 +40,26 @@ class LeaveRequest {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    return <String, dynamic>{
-      'userId': userId as String,
-      'companyId': companyId as String,
-      'type': (type.name) as String,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
-      'reason': reason as String,
-      'status': (status.name) as String,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'approverComment': approverComment,
-      'approvedAt': approvedAt != null ? Timestamp.fromDate(approvedAt!) : null,
-    };
+    final Map<String, dynamic> data = <String, dynamic>{};
+    
+    data['userId'] = userId;
+    data['companyId'] = companyId;
+    data['type'] = type.name;
+    data['startDate'] = Timestamp.fromDate(startDate);
+    data['endDate'] = Timestamp.fromDate(endDate);
+    data['reason'] = reason;
+    data['status'] = status.name;
+    data['createdAt'] = Timestamp.fromDate(createdAt);
+    
+    if (approverComment != null) {
+      data['approverComment'] = approverComment;
+    }
+    
+    if (approvedAt != null) {
+      data['approvedAt'] = Timestamp.fromDate(approvedAt!);
+    }
+    
+    return data;
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）

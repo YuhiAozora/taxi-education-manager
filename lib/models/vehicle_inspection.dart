@@ -213,16 +213,24 @@ class VehicleInspection {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    return <String, dynamic>{
-      'userId': userId as String,
-      'companyId': companyId as String,
-      'inspectionDate': Timestamp.fromDate(inspectionDate),
-      'items': items.map<String, dynamic>((key, value) => MapEntry<String, dynamic>(key as String, value.toFirestore())),
-      'isCompleted': isCompleted as bool,
-      'okCount': okCount as int,
-      'ngCount': ngCount as int,
-      'createdAt': Timestamp.fromDate(createdAt),
-    };
+    final Map<String, dynamic> data = <String, dynamic>{};
+    
+    data['userId'] = userId;
+    data['companyId'] = companyId;
+    data['inspectionDate'] = Timestamp.fromDate(inspectionDate);
+    data['isCompleted'] = isCompleted;
+    data['okCount'] = okCount;
+    data['ngCount'] = ngCount;
+    data['createdAt'] = Timestamp.fromDate(createdAt);
+    
+    // items を Map に変換
+    final Map<String, dynamic> itemsData = <String, dynamic>{};
+    items.forEach((key, value) {
+      itemsData[key] = value.toFirestore();
+    });
+    data['items'] = itemsData;
+    
+    return data;
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）
@@ -279,14 +287,22 @@ class InspectionItem {
 
   /// Firestore への保存用
   Map<String, dynamic> toFirestore() {
-    return <String, dynamic>{
-      'category': category as String,
-      'itemName': itemName as String,
-      'detail': detail as String,
-      'order': order as int,
-      'isOk': isOk as bool?,
-      'note': note as String?,
-    };
+    final Map<String, dynamic> data = <String, dynamic>{};
+    
+    data['category'] = category;
+    data['itemName'] = itemName;
+    data['detail'] = detail;
+    data['order'] = order;
+    
+    if (isOk != null) {
+      data['isOk'] = isOk;
+    }
+    
+    if (note != null) {
+      data['note'] = note;
+    }
+    
+    return data;
   }
 
   /// Firestore からの取得用
