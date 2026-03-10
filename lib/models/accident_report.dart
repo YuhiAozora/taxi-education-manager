@@ -40,19 +40,19 @@ class AccidentReport {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    return {
-      'driverId': driverId,
-      'driverName': driverName,
-      'companyId': companyId,
+    return <String, dynamic>{
+      'driverId': driverId as String,
+      'driverName': driverName as String,
+      'companyId': companyId as String,
       'accidentDate': Timestamp.fromDate(accidentDate),
-      'location': location,
-      'type': type.name,
-      'severity': severity.name,
-      'description': description,
+      'location': location as String,
+      'type': (type.name) as String,
+      'severity': (severity.name) as String,
+      'description': description as String,
       'otherPartyInfo': otherPartyInfo,
       'damageDescription': damageDescription,
       'policeReport': policeReport,
-      'status': status.name,
+      'status': (status.name) as String,
       'createdAt': Timestamp.fromDate(createdAt),
       'adminComment': adminComment,
       'processedAt': processedAt != null ? Timestamp.fromDate(processedAt!) : null,
