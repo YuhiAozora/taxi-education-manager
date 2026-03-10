@@ -695,18 +695,17 @@ class DatabaseService {
   /// Save vehicle inspection (Firestoreに保存)
   static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
-      final ref = _firestore.collection('vehicle_inspections').withConverter<VehicleInspection>(
-        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
-          final data = snapshot.data();
-          if (data == null) {
-            throw Exception('Document data is null');
-          }
-          return VehicleInspection.fromFirestore(data, snapshot.id);
-        },
-        toFirestore: (VehicleInspection value, SetOptions? options) => value.toFirestore(),
-      );
+      // 🔍 デバッグ: toFirestore() の結果を確認
+      final data = inspection.toFirestore();
+      if (kDebugMode) {
+        debugPrint('📤 Sending vehicle inspection to Firestore:');
+        data.forEach((key, value) {
+          debugPrint('  $key: ${value.runtimeType} = $value');
+        });
+      }
       
-      await ref.doc(inspection.id).set(inspection);
+      // withConverter を使わず、直接 Map を送信
+      await _firestore.collection('vehicle_inspections').doc(inspection.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Vehicle inspection saved to Firestore: ${inspection.id}');
@@ -714,6 +713,7 @@ class DatabaseService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to save vehicle inspection: $e');
+        debugPrint('❌ Stack trace: ${StackTrace.current}');
       }
       rethrow;
     }
@@ -782,18 +782,17 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      final ref = _firestore.collection('leave_requests').withConverter<LeaveRequest>(
-        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
-          final data = snapshot.data();
-          if (data == null) {
-            throw Exception('Document data is null');
-          }
-          return LeaveRequest.fromFirestore(data, snapshot.id);
-        },
-        toFirestore: (LeaveRequest value, SetOptions? options) => value.toFirestore(),
-      );
+      // 🔍 デバッグ: toFirestore() の結果を確認
+      final data = request.toFirestore();
+      if (kDebugMode) {
+        debugPrint('📤 Sending to Firestore:');
+        data.forEach((key, value) {
+          debugPrint('  $key: ${value.runtimeType} = $value');
+        });
+      }
       
-      await ref.doc(request.id).set(request);
+      // withConverter を使わず、直接 Map を送信
+      await _firestore.collection('leave_requests').doc(request.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Leave request saved to Firestore: ${request.id}');
@@ -801,6 +800,7 @@ class DatabaseService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to save leave request: $e');
+        debugPrint('❌ Stack trace: ${StackTrace.current}');
       }
       rethrow;
     }
@@ -1030,18 +1030,17 @@ class DatabaseService {
   /// Save accident report
   static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
-      final ref = _firestore.collection('accident_reports').withConverter<AccidentReport>(
-        fromFirestore: (DocumentSnapshot<Map<String, dynamic>> snapshot, SnapshotOptions? options) {
-          final data = snapshot.data();
-          if (data == null) {
-            throw Exception('Document data is null');
-          }
-          return AccidentReport.fromFirestore(data, snapshot.id);
-        },
-        toFirestore: (AccidentReport value, SetOptions? options) => value.toFirestore(),
-      );
+      // 🔍 デバッグ: toFirestore() の結果を確認
+      final data = report.toFirestore();
+      if (kDebugMode) {
+        debugPrint('📤 Sending accident report to Firestore:');
+        data.forEach((key, value) {
+          debugPrint('  $key: ${value.runtimeType} = $value');
+        });
+      }
       
-      await ref.doc(report.id).set(report);
+      // withConverter を使わず、直接 Map を送信
+      await _firestore.collection('accident_reports').doc(report.id).set(data);
       
       if (kDebugMode) {
         debugPrint('✅ Accident report saved to Firestore: ${report.id}');
@@ -1049,6 +1048,7 @@ class DatabaseService {
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Failed to save accident report: $e');
+        debugPrint('❌ Stack trace: ${StackTrace.current}');
       }
       rethrow;
     }
