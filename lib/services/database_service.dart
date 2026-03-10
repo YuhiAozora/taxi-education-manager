@@ -696,8 +696,8 @@ class DatabaseService {
   static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
       final ref = _firestore.collection('vehicle_inspections').withConverter<VehicleInspection>(
-        fromFirestore: (snapshot, _) => VehicleInspection.fromFirestore(snapshot.data()!, snapshot.id),
-        toFirestore: (inspection, _) => inspection.toFirestore(),
+        fromFirestore: (snapshot, options) => VehicleInspection.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (VehicleInspection value, SetOptions? options) => value.toFirestore(),
       );
       
       await ref.doc(inspection.id).set(inspection);
@@ -777,8 +777,8 @@ class DatabaseService {
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
       final ref = _firestore.collection('leave_requests').withConverter<LeaveRequest>(
-        fromFirestore: (snapshot, _) => LeaveRequest.fromFirestore(snapshot.data()!, snapshot.id),
-        toFirestore: (request, _) => request.toFirestore(),
+        fromFirestore: (snapshot, options) => LeaveRequest.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (LeaveRequest value, SetOptions? options) => value.toFirestore(),
       );
       
       await ref.doc(request.id).set(request);
@@ -1019,8 +1019,8 @@ class DatabaseService {
   static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
       final ref = _firestore.collection('accident_reports').withConverter<AccidentReport>(
-        fromFirestore: (snapshot, _) => AccidentReport.fromFirestore(snapshot.data()!, snapshot.id),
-        toFirestore: (report, _) => report.toFirestore(),
+        fromFirestore: (snapshot, options) => AccidentReport.fromFirestore(snapshot.data()!, snapshot.id),
+        toFirestore: (AccidentReport value, SetOptions? options) => value.toFirestore(),
       );
       
       await ref.doc(report.id).set(report);
