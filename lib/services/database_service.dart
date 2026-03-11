@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
@@ -807,25 +808,24 @@ class DatabaseService {
         data['approvedAt'] = request.approvedAt!.toIso8601String();
       }
       
-      if (kDebugMode) {
-        debugPrint('📤 Sending leave request to Firestore:');
-        data.forEach((key, value) {
-          debugPrint('  $key: ${value.runtimeType} = $value');
-        });
-      }
+      // 🔍 リリースビルドでも表示されるログ（developer.log を使用）
+      developer.log('📤 Sending leave request to Firestore:', name: 'DatabaseService');
+      data.forEach((key, value) {
+        developer.log('  $key: ${value.runtimeType} = $value', name: 'DatabaseService');
+      });
       
-      await _firestore.collection('leave_requests').doc(request.id).set(data);
+      // 🔧 Firestore に送信する直前に、もう一度型チェック
+      final cleanData = <String, dynamic>{};
+      data.forEach((key, value) {
+        cleanData[key] = value;
+      });
       
-      if (kDebugMode) {
-        debugPrint('✅ Leave request saved successfully: ${request.id}');
-      }
+      await _firestore.collection('leave_requests').doc(request.id).set(cleanData);
+      
+      developer.log('✅ Leave request saved successfully: ${request.id}', name: 'DatabaseService');
     } catch (e, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('❌ Failed to save leave request:');
-        debugPrint('  Error: $e');
-        debugPrint('  Error type: ${e.runtimeType}');
-        debugPrint('  Stack trace: $stackTrace');
-      }
+      developer.log('❌ Failed to save leave request:', name: 'DatabaseService', error: e, stackTrace: stackTrace);
+      developer.log('  Error type: ${e.runtimeType}', name: 'DatabaseService');
       rethrow;
     }
   }
