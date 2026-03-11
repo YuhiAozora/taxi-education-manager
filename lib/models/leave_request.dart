@@ -40,26 +40,19 @@ class LeaveRequest {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    
-    data['userId'] = userId;
-    data['companyId'] = companyId;
-    data['type'] = type.name;
-    data['startDate'] = Timestamp.fromDate(startDate);
-    data['endDate'] = Timestamp.fromDate(endDate);
-    data['reason'] = reason;
-    data['status'] = status.name;
-    data['createdAt'] = Timestamp.fromDate(createdAt);
-    
-    if (approverComment != null) {
-      data['approverComment'] = approverComment;
-    }
-    
-    if (approvedAt != null) {
-      data['approvedAt'] = Timestamp.fromDate(approvedAt!);
-    }
-    
-    return data;
+    // 明示的に <String, dynamic> を指定
+    return <String, dynamic>{
+      'userId': userId.toString(),
+      'companyId': companyId.toString(),
+      'type': type.toString().split('.').last,  // Enum を文字列に変換
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'reason': reason.toString(),
+      'status': status.toString().split('.').last,  // Enum を文字列に変換
+      'createdAt': Timestamp.fromDate(createdAt),
+      if (approverComment != null) 'approverComment': approverComment.toString(),
+      if (approvedAt != null) 'approvedAt': Timestamp.fromDate(approvedAt!),
+    };
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）

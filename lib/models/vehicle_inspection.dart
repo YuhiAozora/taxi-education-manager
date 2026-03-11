@@ -213,24 +213,21 @@ class VehicleInspection {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    
-    data['userId'] = userId;
-    data['companyId'] = companyId;
-    data['inspectionDate'] = Timestamp.fromDate(inspectionDate);
-    data['isCompleted'] = isCompleted;
-    data['okCount'] = okCount;
-    data['ngCount'] = ngCount;
-    data['createdAt'] = Timestamp.fromDate(createdAt);
-    
     // items を Map に変換
-    final Map<String, dynamic> itemsData = <String, dynamic>{};
-    items.forEach((key, value) {
-      itemsData[key] = value.toFirestore();
-    });
-    data['items'] = itemsData;
+    final itemsData = items.map<String, dynamic>(
+      (key, value) => MapEntry(key.toString(), value.toFirestore())
+    );
     
-    return data;
+    return <String, dynamic>{
+      'userId': userId.toString(),
+      'companyId': companyId.toString(),
+      'inspectionDate': Timestamp.fromDate(inspectionDate),
+      'isCompleted': isCompleted == true,  // 明示的に bool に変換
+      'okCount': okCount.toInt(),          // 明示的に int に変換
+      'ngCount': ngCount.toInt(),          // 明示的に int に変換
+      'createdAt': Timestamp.fromDate(createdAt),
+      'items': itemsData,
+    };
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）
@@ -287,22 +284,14 @@ class InspectionItem {
 
   /// Firestore への保存用
   Map<String, dynamic> toFirestore() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    
-    data['category'] = category;
-    data['itemName'] = itemName;
-    data['detail'] = detail;
-    data['order'] = order;
-    
-    if (isOk != null) {
-      data['isOk'] = isOk;
-    }
-    
-    if (note != null) {
-      data['note'] = note;
-    }
-    
-    return data;
+    return <String, dynamic>{
+      'category': category.toString(),
+      'itemName': itemName.toString(),
+      'detail': detail.toString(),
+      'order': order.toInt(),
+      if (isOk != null) 'isOk': isOk == true,  // 明示的に bool に変換
+      if (note != null) 'note': note.toString(),
+    };
   }
 
   /// Firestore からの取得用

@@ -40,40 +40,23 @@ class AccidentReport {
 
   /// Firestore への保存用（DateTime は Timestamp に変換）
   Map<String, dynamic> toFirestore() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    
-    data['driverId'] = driverId;
-    data['driverName'] = driverName;
-    data['companyId'] = companyId;
-    data['accidentDate'] = Timestamp.fromDate(accidentDate);
-    data['location'] = location;
-    data['type'] = type.name;
-    data['severity'] = severity.name;
-    data['description'] = description;
-    data['status'] = status.name;
-    data['createdAt'] = Timestamp.fromDate(createdAt);
-    
-    if (otherPartyInfo != null) {
-      data['otherPartyInfo'] = otherPartyInfo;
-    }
-    
-    if (damageDescription != null) {
-      data['damageDescription'] = damageDescription;
-    }
-    
-    if (policeReport != null) {
-      data['policeReport'] = policeReport;
-    }
-    
-    if (adminComment != null) {
-      data['adminComment'] = adminComment;
-    }
-    
-    if (processedAt != null) {
-      data['processedAt'] = Timestamp.fromDate(processedAt!);
-    }
-    
-    return data;
+    return <String, dynamic>{
+      'driverId': driverId.toString(),
+      'driverName': driverName.toString(),
+      'companyId': companyId.toString(),
+      'accidentDate': Timestamp.fromDate(accidentDate),
+      'location': location.toString(),
+      'type': type.toString().split('.').last,
+      'severity': severity.toString().split('.').last,
+      'description': description.toString(),
+      'status': status.toString().split('.').last,
+      'createdAt': Timestamp.fromDate(createdAt),
+      if (otherPartyInfo != null) 'otherPartyInfo': otherPartyInfo.toString(),
+      if (damageDescription != null) 'damageDescription': damageDescription.toString(),
+      if (policeReport != null) 'policeReport': policeReport.toString(),
+      if (adminComment != null) 'adminComment': adminComment.toString(),
+      if (processedAt != null) 'processedAt': Timestamp.fromDate(processedAt!),
+    };
   }
 
   /// Firestore からの取得用（Timestamp は DateTime に変換）
