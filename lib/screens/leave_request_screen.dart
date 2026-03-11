@@ -190,12 +190,25 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
       }
     } catch (e) {
       if (mounted) {
+        // 🔍 詳細なエラー情報を表示
+        final errorType = e.runtimeType.toString();
+        final errorMessage = e.toString();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('申請の送信に失敗しました: $e'),
+            content: Text('申請の送信に失敗しました:\n型: $errorType\nエラー: $errorMessage'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10),
           ),
         );
+        
+        // コンソールにも詳細を出力
+        if (kDebugMode) {
+          debugPrint('❌ Leave request submission error:');
+          debugPrint('  Error type: $errorType');
+          debugPrint('  Error message: $errorMessage');
+          debugPrint('  Full error: $e');
+        }
       }
     } finally {
       if (mounted) {

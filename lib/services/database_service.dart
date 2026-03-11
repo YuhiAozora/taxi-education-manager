@@ -787,15 +787,25 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      final rawData = request.toFirestore();
+      // 🔧 直接 Map リテラルで作成（最も確実な方法）
+      final data = {
+        'userId': request.userId,
+        'companyId': request.companyId,
+        'type': request.type.toString().split('.').last,
+        'startDate': request.startDate.toIso8601String(),
+        'endDate': request.endDate.toIso8601String(),
+        'reason': request.reason,
+        'status': request.status.toString().split('.').last,
+        'createdAt': request.createdAt.toIso8601String(),
+      };
       
-      // 🔧 明示的に新しい Map を作成（型を完全に保証）
-      final data = <String, dynamic>{};
-      rawData.forEach((key, value) {
-        if (value != null) {
-          data[key.toString()] = value;
-        }
-      });
+      // nullable フィールドを追加
+      if (request.approverComment != null) {
+        data['approverComment'] = request.approverComment!;
+      }
+      if (request.approvedAt != null) {
+        data['approvedAt'] = request.approvedAt!.toIso8601String();
+      }
       
       if (kDebugMode) {
         debugPrint('📤 Sending leave request to Firestore:');
@@ -807,7 +817,7 @@ class DatabaseService {
       await _firestore.collection('leave_requests').doc(request.id).set(data);
       
       if (kDebugMode) {
-        debugPrint('✅ Leave request saved successfully');
+        debugPrint('✅ Leave request saved successfully: ${request.id}');
       }
     } catch (e, stackTrace) {
       if (kDebugMode) {
