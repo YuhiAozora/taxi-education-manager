@@ -787,7 +787,15 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      final data = request.toFirestore();
+      final rawData = request.toFirestore();
+      
+      // 🔧 明示的に新しい Map を作成（型を完全に保証）
+      final data = <String, dynamic>{};
+      rawData.forEach((key, value) {
+        if (value != null) {
+          data[key.toString()] = value;
+        }
+      });
       
       if (kDebugMode) {
         debugPrint('📤 Sending leave request to Firestore:');
@@ -805,6 +813,7 @@ class DatabaseService {
       if (kDebugMode) {
         debugPrint('❌ Failed to save leave request:');
         debugPrint('  Error: $e');
+        debugPrint('  Error type: ${e.runtimeType}');
         debugPrint('  Stack trace: $stackTrace');
       }
       rethrow;
