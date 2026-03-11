@@ -787,30 +787,25 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      // 🔧 完全に安全な変換: JSON エンコード → デコード
-      final rawData = request.toFirestore();
-      
-      // JSON 文字列に変換してから再度パース（型を完全にクリア）
-      final jsonString = jsonEncode(rawData);
-      final cleanData = jsonDecode(jsonString) as Map<String, dynamic>;
+      final data = request.toFirestore();
       
       if (kDebugMode) {
-        debugPrint('📤 Sending to Firestore (after JSON cleaning):');
-        cleanData.forEach((key, value) {
+        debugPrint('📤 Sending leave request to Firestore:');
+        data.forEach((key, value) {
           debugPrint('  $key: ${value.runtimeType} = $value');
         });
       }
       
-      // クリーンなデータを Firestore に送信
-      await _firestore.collection('leave_requests').doc(request.id).set(cleanData);
+      await _firestore.collection('leave_requests').doc(request.id).set(data);
       
       if (kDebugMode) {
-        debugPrint('✅ Leave request saved to Firestore: ${request.id}');
+        debugPrint('✅ Leave request saved successfully');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {
-        debugPrint('❌ Failed to save leave request: $e');
-        debugPrint('❌ Stack trace: ${StackTrace.current}');
+        debugPrint('❌ Failed to save leave request:');
+        debugPrint('  Error: $e');
+        debugPrint('  Stack trace: $stackTrace');
       }
       rethrow;
     }

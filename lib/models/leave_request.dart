@@ -38,24 +38,24 @@ class LeaveRequest {
     return endDate.difference(startDate).inDays + 1;
   }
 
-  /// Firestore への保存用（DateTime は Timestamp に変換）
+  /// Firestore への保存用（DateTime は ISO8601 文字列に変換）
   Map<String, dynamic> toFirestore() {
     // 明示的に <String, dynamic> を指定
     return <String, dynamic>{
       'userId': userId.toString(),
       'companyId': companyId.toString(),
       'type': type.toString().split('.').last,  // Enum を文字列に変換
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
       'reason': reason.toString(),
       'status': status.toString().split('.').last,  // Enum を文字列に変換
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       if (approverComment != null) 'approverComment': approverComment.toString(),
-      if (approvedAt != null) 'approvedAt': Timestamp.fromDate(approvedAt!),
+      if (approvedAt != null) 'approvedAt': approvedAt!.toIso8601String(),
     };
   }
 
-  /// Firestore からの取得用（Timestamp は DateTime に変換）
+  /// Firestore からの取得用（ISO8601 文字列または Timestamp を DateTime に変換）
   factory LeaveRequest.fromFirestore(Map<String, dynamic> data, String id) {
     return LeaveRequest(
       id: id,
@@ -65,19 +65,30 @@ class LeaveRequest {
         (e) => e.name == data['type'],
         orElse: () => LeaveType.paidLeave,
       ),
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
+      startDate: _parseDateTime(data['startDate']),
+      endDate: _parseDateTime(data['endDate']),
       reason: data['reason'] as String,
       status: LeaveStatus.values.firstWhere(
         (e) => e.name == data['status'],
         orElse: () => LeaveStatus.pending,
       ),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
       approverComment: data['approverComment'] as String?,
-      approvedAt: data['approvedAt'] != null
-          ? (data['approvedAt'] as Timestamp).toDate()
+      approvedAt: data['approvedAt'] != null 
+          ? _parseDateTime(data['approvedAt'])
           : null,
     );
+  }
+
+  /// DateTime のパース（ISO8601 文字列または Timestamp に対応）
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is String) {
+      return DateTime.parse(value);
+    } else if (value is Timestamp) {
+      return value.toDate();
+    } else {
+      throw Exception('Invalid date format: $value');
+    }
   }
 
   @Deprecated('Use toFirestore() instead')
