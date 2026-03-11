@@ -695,17 +695,22 @@ class DatabaseService {
   /// Save vehicle inspection (Firestoreに保存)
   static Future<void> saveVehicleInspection(VehicleInspection inspection) async {
     try {
-      // 🔍 デバッグ: toFirestore() の結果を確認
-      final data = inspection.toFirestore();
+      // 🔧 完全に安全な変換: JSON エンコード → デコード
+      final rawData = inspection.toFirestore();
+      
+      // JSON 文字列に変換してから再度パース（型を完全にクリア）
+      final jsonString = jsonEncode(rawData);
+      final cleanData = jsonDecode(jsonString) as Map<String, dynamic>;
+      
       if (kDebugMode) {
-        debugPrint('📤 Sending vehicle inspection to Firestore:');
-        data.forEach((key, value) {
+        debugPrint('📤 Sending vehicle inspection to Firestore (after JSON cleaning):');
+        cleanData.forEach((key, value) {
           debugPrint('  $key: ${value.runtimeType} = $value');
         });
       }
       
-      // withConverter を使わず、直接 Map を送信
-      await _firestore.collection('vehicle_inspections').doc(inspection.id).set(data);
+      // クリーンなデータを Firestore に送信
+      await _firestore.collection('vehicle_inspections').doc(inspection.id).set(cleanData);
       
       if (kDebugMode) {
         debugPrint('✅ Vehicle inspection saved to Firestore: ${inspection.id}');
@@ -782,17 +787,22 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      // 🔍 デバッグ: toFirestore() の結果を確認
-      final data = request.toFirestore();
+      // 🔧 完全に安全な変換: JSON エンコード → デコード
+      final rawData = request.toFirestore();
+      
+      // JSON 文字列に変換してから再度パース（型を完全にクリア）
+      final jsonString = jsonEncode(rawData);
+      final cleanData = jsonDecode(jsonString) as Map<String, dynamic>;
+      
       if (kDebugMode) {
-        debugPrint('📤 Sending to Firestore:');
-        data.forEach((key, value) {
+        debugPrint('📤 Sending to Firestore (after JSON cleaning):');
+        cleanData.forEach((key, value) {
           debugPrint('  $key: ${value.runtimeType} = $value');
         });
       }
       
-      // withConverter を使わず、直接 Map を送信
-      await _firestore.collection('leave_requests').doc(request.id).set(data);
+      // クリーンなデータを Firestore に送信
+      await _firestore.collection('leave_requests').doc(request.id).set(cleanData);
       
       if (kDebugMode) {
         debugPrint('✅ Leave request saved to Firestore: ${request.id}');
@@ -1030,17 +1040,22 @@ class DatabaseService {
   /// Save accident report
   static Future<void> saveAccidentReport(AccidentReport report) async {
     try {
-      // 🔍 デバッグ: toFirestore() の結果を確認
-      final data = report.toFirestore();
+      // 🔧 完全に安全な変換: JSON エンコード → デコード
+      final rawData = report.toFirestore();
+      
+      // JSON 文字列に変換してから再度パース（型を完全にクリア）
+      final jsonString = jsonEncode(rawData);
+      final cleanData = jsonDecode(jsonString) as Map<String, dynamic>;
+      
       if (kDebugMode) {
-        debugPrint('📤 Sending accident report to Firestore:');
-        data.forEach((key, value) {
+        debugPrint('📤 Sending accident report to Firestore (after JSON cleaning):');
+        cleanData.forEach((key, value) {
           debugPrint('  $key: ${value.runtimeType} = $value');
         });
       }
       
-      // withConverter を使わず、直接 Map を送信
-      await _firestore.collection('accident_reports').doc(report.id).set(data);
+      // クリーンなデータを Firestore に送信
+      await _firestore.collection('accident_reports').doc(report.id).set(cleanData);
       
       if (kDebugMode) {
         debugPrint('✅ Accident report saved to Firestore: ${report.id}');
