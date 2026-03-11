@@ -787,21 +787,21 @@ class DatabaseService {
   /// Save leave request (Firestoreに保存)
   static Future<void> saveLeaveRequest(LeaveRequest request) async {
     try {
-      // 🔧 直接 Map リテラルで作成（最も確実な方法）
-      final data = {
-        'userId': request.userId,
-        'companyId': request.companyId,
+      // 🔧 すべてのフィールドを明示的に String に変換
+      final data = <String, Object>{
+        'userId': request.userId.toString(),
+        'companyId': request.companyId.toString(),
         'type': request.type.toString().split('.').last,
         'startDate': request.startDate.toIso8601String(),
         'endDate': request.endDate.toIso8601String(),
-        'reason': request.reason,
+        'reason': request.reason.toString(),
         'status': request.status.toString().split('.').last,
         'createdAt': request.createdAt.toIso8601String(),
       };
       
       // nullable フィールドを追加
-      if (request.approverComment != null) {
-        data['approverComment'] = request.approverComment!;
+      if (request.approverComment != null && request.approverComment!.isNotEmpty) {
+        data['approverComment'] = request.approverComment!.toString();
       }
       if (request.approvedAt != null) {
         data['approvedAt'] = request.approvedAt!.toIso8601String();
